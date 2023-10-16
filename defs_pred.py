@@ -3,14 +3,13 @@ import pandas as pd
 import pandas_market_calendars as mcal
 import warnings
 import ta
-from PublicDataReader import Fred
 from marcap import marcap_data
+from PublicDataReader import Fred
 from datetime import datetime, timedelta
 from functools import reduce
 
 #FRED API 키    
 api_key = "8719c9b0cc99f6dda2a3ac2ae6f8a84d"
-
 #오늘 날자 가져오기
 today = '2023-10-13'
 today_ = datetime.today()
