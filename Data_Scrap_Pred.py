@@ -3,7 +3,6 @@ import pandas as pd
 import defs_pred
 import time
 from pykrx import stock
-from tqdm import tqdm
 
 def Data_Scrap_Pred():
     code_list = stock.get_market_ticker_list('231011', market='KOSPI')

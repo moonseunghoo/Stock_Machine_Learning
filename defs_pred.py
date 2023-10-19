@@ -13,7 +13,7 @@ api_key = "8719c9b0cc99f6dda2a3ac2ae6f8a84d"
 #오늘 날자 가져오기
 today = '2023-10-13'
 today_ = datetime.today()
-delta = timedelta(days=200)
+delta = timedelta(days=213)
 day_120 = (today_ - delta).strftime("%Y-%m-%d")
 today_ = today_.strftime("%Y-%m-%d")
 
@@ -179,7 +179,8 @@ def scrap_sub_data():
     # VIX 지수 
     VIX_df = fdr.DataReader('VIX',day_120,today).reset_index().drop(
         ['Open','High','Low','Volume','Adj Close'], axis=1).rename(
-            columns={'Close':'VIX_Clo','Volume':'VIX_Vol'}).round(2)
+            columns={'Close':'VIX_Clo'}).round(2)
+
 
     # 코스피 지수 
     KSI_df = fdr.DataReader('KS11',day_120,today).reset_index().drop(
