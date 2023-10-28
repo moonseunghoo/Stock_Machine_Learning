@@ -3,6 +3,8 @@ import pandas as pd
 import pandas_market_calendars as mcal
 import warnings
 import ta
+
+from pykrx import stock
 from PublicDataReader import Fred
 from marcap import marcap_data
 from functools import reduce
@@ -38,7 +40,7 @@ def CPI() -> pd.DataFrame:
     # 전년 동월 값 컬럼만 선택
     df = df[['CPI(YoY)']].reset_index()
 
-    del_date = pd.to_datetime('2019-01-01')
+    del_date = pd.to_datetime('2021-01-01')
     df = df[df['date'] >= del_date]
     df = df.set_index('date')
 
@@ -67,7 +69,7 @@ def FED_RATE() -> pd.DataFrame:
     # 기준금리 컬럼만 선택
     df = df[['FED RATE']].reset_index()
    
-    del_date = pd.to_datetime('2019-01-01')
+    del_date = pd.to_datetime('2021-01-01')
     df = df[df['date'] >= del_date]
     df = df.set_index('date')
 
@@ -85,8 +87,8 @@ def merging_stock_data(code):
 
 def m_df_to_d_df(m_df):
 
-    start_date = '2019-01-01'
-    end_date = '2023-09-30'
+    start_date = '2021-01-01'
+    end_date = '2023-07-31'
     date_range = pd.date_range(start_date,end_date,freq='D')
     ch_df = m_df.reindex(date_range).fillna(method='ffill')
 
@@ -98,7 +100,7 @@ def filter_df(df):
     # 한국 주식시장(KRX)의 개장일 캘린더 생성
     krx = mcal.get_calendar('XKRX')
     # 개장일 가져오기
-    schedule = krx.schedule('2019-01-01','2023-09-30')
+    schedule = krx.schedule('2021-01-01','2023-07-31')
     # break_start,break_end 제거
     krx.remove_time(market_time='break_start')
     krx.remove_time(market_time='break_end')
@@ -111,8 +113,11 @@ def filter_df(df):
 
 def scrap_stock_data(code):
     warnings.simplefilter(action='ignore', category=FutureWarning) # FutureWarning 제거
+    
+    stock_df = fdr.DataReader(code,'2021-01-01','2023-07-31').reset_index()
 
-    stock_df = fdr.DataReader(code,'2019-01-01','2023-09-30').reset_index()
+    buy_df = stock.get_market_trading_volume_by_date("20210101", "20230731", code, on='매수').iloc[:,2].reset_index()
+    sell_df = stock.get_market_trading_volume_by_date("20210101", "20230731", code, on='매도').iloc[:,2].reset_index()
 
     # 이동평균선 5,20,60,200 O
     ma = [5,20,60,120]
@@ -135,10 +140,14 @@ def scrap_stock_data(code):
     #해당 종목 일목균형표
     stock_df['VI'] = ta.trend.vortex_indicator_pos(high=H,low=L,close=C,fillna=True).round(2)
     #y 라벨 결과 데이터프레임 
-    stock_df['Label'] = (stock_df['Change'] >= 5) & (stock_df['Change'] > 0)
+    label_values = (stock_df['Change'] >= 5) & (stock_df['Change'] > 0)
+    shifted_values = label_values.shift(2)
+    stock_df['Label'] = shifted_values
+    #해당 종목 체결강도
+    stock_df['VP'] = (buy_df['개인']/sell_df['개인']*100).round(2)
 
     #해당 종목 시가총액, 거래대금, 주식수
-    M_df = marcap_data('2019-01-01','2023-09-30',code=code)
+    M_df = marcap_data('2021-01-01','2023-07-31',code=code)
     selected_colums = ['Amount','Marcap','Stocks']
     M_df = M_df[selected_colums].reset_index()
 
@@ -153,36 +162,34 @@ def scrap_stock_data(code):
 def scrap_sub_data():
     warnings.simplefilter(action='ignore', category=FutureWarning) # FutureWarning 제거
     # # 다우존스 지수 
-    # DJI_df = fdr.DataReader('DJI', '2019-01-01','2023-09-30').reset_index().drop(
+    # DJI_df = fdr.DataReader('DJI', '2019-01-01','2023-07-31').reset_index().drop(
     #     ['Open','High','Low','Adj Close'], axis=1).rename(
     #         columns={'Close':'DJI_Clo','Volume':'DJI_Vol'}).round(2)
     # 나스닥 지수
-    IXIC_df = fdr.DataReader('IXIC', '2019-01-01','2023-09-30').reset_index().drop(
+    IXIC_df = fdr.DataReader('IXIC', '2021-01-01','2023-07-31').reset_index().drop(
         ['Open','High','Low','Adj Close'], axis=1).rename(
             columns={'Close':'IXIC_Clo','Volume':'IXIC_Vol'}).round(2)
     # # S&P500 지수 
-    # SP5_df = fdr.DataReader('US500','2019-01-01','2023-09-30').reset_index().drop(
+    # SP5_df = fdr.DataReader('US500','2019-01-01','2023-07-31').reset_index().drop(
     #     ['Open','High','Low','Adj Close'], axis=1).rename(
     #         columns={'Close':'SP5_Clo','Volume':'SP5_Vol'}).round(2)
     # VIX 지수 
-    VIX_df = fdr.DataReader('VIX','2019-01-01','2023-09-30').reset_index().drop(
+    VIX_df = fdr.DataReader('VIX','2021-01-01','2023-07-31').reset_index().drop(
         ['Open','High','Low','Volume','Adj Close'], axis=1).rename(
             columns={'Close':'VIX_Clo'}).round(2)
     # 코스피 지수 
-    KSI_df = fdr.DataReader('KS11','2019-01-01','2023-09-30').reset_index().drop(
+    KSI_df = fdr.DataReader('KS11','2021-01-01','2023-07-31').reset_index().drop(
         ['Open','High','Low','Adj Close'], axis=1).rename(
             columns={'Close':'KSI_Clo','Volume':'KSI_Vol'}).round(2)
     # 원/달러 환율 
-    USD_df = fdr.DataReader('USD/KRW','2019-01-01','2023-09-30').reset_index().drop(
+    USD_df = fdr.DataReader('USD/KRW','2021-01-01','2023-07-31').reset_index().drop(
         ['Open','High','Low','Adj Close','Volume'], axis=1).rename(
             columns={'Close':'USD/KRW_CLO'}).round(2)
-    # # 미국 국채 금리 (20,10,5,1년) 
-    # DGS_df = fdr.DataReader('FRED:DGS20,DGS10,DGS5,DGS1', '2019-01-01','2023-09-30'
-    #                         ).reset_index().rename(columns={'DATE':'Date'}).round(2)
+
     #미국 소비자심리 지수(CSI) 
-    UMCSENT_df_b = fdr.DataReader('FRED:UMCSENT', '2019-01-01').round(2)
+    UMCSENT_df_b = fdr.DataReader('FRED:UMCSENT', '2021-01-01').round(2)
     #M2 통화량 
-    M2SL_df_b = fdr.DataReader('FRED:M2SL', '2019-01-01').round(2)
+    M2SL_df_b = fdr.DataReader('FRED:M2SL', '2021-01-01').round(2)
     #CPI 지표
     CPI_df_b = CPI()
     #연준 기준금리

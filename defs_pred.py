@@ -3,6 +3,8 @@ import pandas as pd
 import pandas_market_calendars as mcal
 import warnings
 import ta
+
+from pykrx import stock
 from marcap import marcap_data
 from PublicDataReader import Fred
 from datetime import datetime, timedelta
@@ -13,7 +15,7 @@ api_key = "8719c9b0cc99f6dda2a3ac2ae6f8a84d"
 #오늘 날자 가져오기
 today = '2023-10-13'
 today_ = datetime.today()
-delta = timedelta(days=213)
+delta = timedelta(days=210)
 day_120 = (today_ - delta).strftime("%Y-%m-%d")
 today_ = today_.strftime("%Y-%m-%d")
 
@@ -88,7 +90,7 @@ def merging_stock_data(code):
     merge_stock_list = []
     stock_list = scrap_stock_data(code)
     total_list = pd.merge(stock_list,sub_list,how='outer',on='Date')
-    total_list = total_list.dropna(axis=0).reset_index(drop=True).tail(20).values.tolist()
+    total_list = total_list.dropna(axis=0).reset_index(drop=True).tail(3).values.tolist()
     for row in total_list:
         row.insert(0,code)
         merge_stock_list.append(row)
@@ -125,6 +127,9 @@ def scrap_stock_data(code):
 
     stock_df = fdr.DataReader(code,day_120,today).reset_index()
 
+    buy_df = stock.get_market_trading_volume_by_date(day_120,today, code, on='매수').iloc[:,2].reset_index()
+    sell_df = stock.get_market_trading_volume_by_date(day_120,today, code, on='매도').iloc[:,2].reset_index()
+
     # 이동평균선 5,20,60,200 O
     ma = [5,20,60,120]
     for days in ma:
@@ -145,6 +150,8 @@ def scrap_stock_data(code):
     stock_df['VPT'] = ta.volume.volume_price_trend(close=C, volume=V).round(2)
     #해당 종목 일목균형표
     stock_df['VI'] = ta.trend.vortex_indicator_pos(high=H,low=L,close=C,fillna=True).round(2)
+    #해당 종목 체결강도
+    stock_df['VP'] = (buy_df['개인']/sell_df['개인']*100).round(2)
 
     #해당 종목 시가총액, 거래대금, 주식수
     M_df = marcap_data(day_120,today,code=code)
