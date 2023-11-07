@@ -1,7 +1,10 @@
 import FinanceDataReader as fdr
+import multiprocessing
 import pandas as pd
+import numpy as np
 import pandas_market_calendars as mcal
 import warnings
+import time
 import ta
 
 from pykrx import stock
@@ -10,24 +13,49 @@ from PublicDataReader import Fred
 from datetime import datetime, timedelta
 from functools import reduce
 
-#FRED API 키    
-api_key = "8719c9b0cc99f6dda2a3ac2ae6f8a84d"
-#오늘 날자 가져오기
-today = '2023-10-13'
-today_ = datetime.today()
-delta = timedelta(days=210)
-day_120 = (today_ - delta).strftime("%Y-%m-%d")
-today_ = today_.strftime("%Y-%m-%d")
+#날자 변수 생성
+def date_info():
+    targer_day = datetime(year=2023,month=11,day=7) 
 
+    if targer_day.strftime('%a') == 'Mon':
+        end_info_day = (targer_day - timedelta(days=3))
+        delta = timedelta(days=210)
+        day_120 = (end_info_day - delta).strftime("%Y-%m-%d")
 
-#당일 날자까지 빈 날자 채우기 위한 값
-specific_value = pd.to_datetime(today)
+    elif targer_day.strftime('%a') == 'Tue':
+        end_info_day = (targer_day - timedelta(days=2))
+        delta = timedelta(days=210)
+        day_120 = (end_info_day - delta).strftime("%Y-%m-%d")
 
-#인스턴스 생성
-api = Fred(api_key)
+    else :
+        end_info_day = (targer_day - timedelta(days=1))
+        delta = timedelta(days=210)
+        day_120 = (end_info_day - delta).strftime("%Y-%m-%d")
 
-def CPI() -> pd.DataFrame:
+    return end_info_day, day_120
+
+#종목코드 생성
+def ticker_list():
+    # KOSPI 종목 코드 불러오기
+    kospi = fdr.StockListing('KOSPI')
+    kosdaq = fdr.StockListing('KOSDAQ')
+
+    # 거래량이 0이 아닌 종목 필터링
+    kospi = kospi[kospi['Volume'] > 1000]
+    kosdaq = kosdaq[kosdaq['Volume'] > 1000]
+
+    # code = pd.DataFrame(kospi['Code'])
+    code = pd.concat([kospi['Code'],kosdaq['Code']],axis=0)
+
+    code_list = [item for item in code if not any(char.isalpha() for char in item)]
+    return code_list
+
+def CPI(end_info_day, day_120) -> pd.DataFrame:
     """CPI(Consumer Price Index) 시리즈 데이터 조회 함수"""
+    #FRED API 키    
+    api_key = "8719c9b0cc99f6dda2a3ac2ae6f8a84d"
+    #인스턴스 생성
+    api = Fred(api_key)
     # 시리즈 ID값
     series_id = "CPIAUCNS"
 
@@ -57,8 +85,12 @@ def CPI() -> pd.DataFrame:
 
     return df
 
-def FED_RATE() -> pd.DataFrame:
+def FED_RATE(end_info_day, day_120) -> pd.DataFrame:
     """목표 연준 기준금리 시리즈 데이터 조회 함수"""
+    #FRED API 키    
+    api_key = "8719c9b0cc99f6dda2a3ac2ae6f8a84d"
+    #인스턴스 생성
+    api = Fred(api_key)
     
     # 시리즈 ID 값
     series_id = "DFEDTARU"
@@ -86,32 +118,63 @@ def FED_RATE() -> pd.DataFrame:
 
     return df
  
-def merging_stock_data(code):
+def Data_Scrap_Pred():
+    #종목코드 생성
+    code_list = ticker_list()
+    # code_list = ['005930']
+
+    #날자 변수 생성
+    end_info_day, day_120 = date_info()
+
+    stock_data = []
+    #보조지표 생성
+    s_list = scrap_sub_data(end_info_day, day_120)
+    #merging_stock_data에 입력할 2개 인자 
+    input_data = [(code_list, s_list, end_info_day, day_120) for code_list in code_list]
+    ## 멀티 프로세싱 ###
+    p = multiprocessing.Pool(processes=8)
+    for row in p.starmap(merging_stock_data, input_data):
+        stock_data += row
+    p.close()
+    p.join()
+    s_df = pd.DataFrame(stock_data)
+    #timestamp 형식 int로 변환
+    s_df[1] = s_df[1].dt.year * 10000 + s_df[1].dt.month * 100 + s_df[1].dt.day
+    s_df = s_df[~s_df[0].str.contains('K|L|M')]
+    
+    return s_df
+
+def merging_stock_data(code,s_list, end_info_day, day_120):
     merge_stock_list = []
-    stock_list = scrap_stock_data(code)
+    sub_list = s_list
+    stock_list = scrap_stock_data(code, end_info_day, day_120)
+    #data열을 기준으로 2개의 데이터프레임 병합
     total_list = pd.merge(stock_list,sub_list,how='outer',on='Date')
+    #inf 값 Nan으로 대체
+    total_list.replace([np.inf, -np.inf], np.nan, inplace=True)
+    #Nan값 없애고 리스트화
     total_list = total_list.dropna(axis=0).reset_index(drop=True).tail(3).values.tolist()
     for row in total_list:
         row.insert(0,code)
         merge_stock_list.append(row)
     return merge_stock_list
 
-def m_df_to_d_df(m_df):
+def m_df_to_d_df(m_df, end_info_day, day_120):
 
     start_date = day_120
-    end_date = today
+    end_date = end_info_day
     date_range = pd.date_range(start_date,end_date,freq='D')
     ch_df = m_df.reindex(date_range).fillna(method='ffill')
 
     return ch_df
 
-def filter_df(df):
+def filter_df(df, end_info_day, day_120):
     # 경고 메시지 무시 설정
     warnings.filterwarnings("ignore")
     # 한국 주식시장(KRX)의 개장일 캘린더 생성
     krx = mcal.get_calendar('XKRX')
     # 개장일 가져오기
-    schedule = krx.schedule(day_120,today)
+    schedule = krx.schedule(day_120,end_info_day)
     # break_start,break_end 제거
     krx.remove_time(market_time='break_start')
     krx.remove_time(market_time='break_end')
@@ -122,13 +185,10 @@ def filter_df(df):
 
     return filter_df
 
-def scrap_stock_data(code):
+def scrap_stock_data(code, end_info_day, day_120):
     warnings.simplefilter(action='ignore', category=FutureWarning) # FutureWarning 제거
 
-    stock_df = fdr.DataReader(code,day_120,today).reset_index()
-
-    buy_df = stock.get_market_trading_volume_by_date(day_120,today, code, on='매수').iloc[:,2].reset_index()
-    sell_df = stock.get_market_trading_volume_by_date(day_120,today, code, on='매도').iloc[:,2].reset_index()
+    stock_df = fdr.DataReader(code,day_120,end_info_day).reset_index()
 
     # 이동평균선 5,20,60,200 O
     ma = [5,20,60,120]
@@ -150,11 +210,20 @@ def scrap_stock_data(code):
     stock_df['VPT'] = ta.volume.volume_price_trend(close=C, volume=V).round(2)
     #해당 종목 일목균형표
     stock_df['VI'] = ta.trend.vortex_indicator_pos(high=H,low=L,close=C,fillna=True).round(2)
-    #해당 종목 체결강도
-    stock_df['VP'] = (buy_df['개인']/sell_df['개인']*100).round(2)
+    # #해당 종목 체결강도
+    # if stock.get_market_trading_volume_by_date(day_120,end_info_day, code, on='매수').empty:
+    #     vp_df = 100
+    # else :
+    #     time.sleep(0.1)
+    #     buy_df = stock.get_market_trading_volume_by_date(day_120,end_info_day, code, on='매수').iloc[:,2].reset_index()
+    #     time.sleep(0.1)
+    #     sell_df = stock.get_market_trading_volume_by_date(day_120,end_info_day, code, on='매도').iloc[:,2].reset_index()
+    #     #해당 종목 체결강도
+    #     vp_df = (buy_df.iloc[:,1]/sell_df.iloc[:,1]*100).round(2)
+    # stock_df['VP'] = vp_df
 
     #해당 종목 시가총액, 거래대금, 주식수
-    M_df = marcap_data(day_120,today,code=code)
+    M_df = marcap_data(day_120,end_info_day,code=code)
     selected_colums = ['Amount','Marcap','Stocks']
     M_df = M_df[selected_colums].reset_index()
 
@@ -163,10 +232,10 @@ def scrap_stock_data(code):
     dataset_df = reduce(lambda x,y : pd.merge(x,y,on='Date'),merge_df)
 
     #주식시장 개장일만 분류
-    filtered_df = filter_df(dataset_df)
+    filtered_df = filter_df(dataset_df, end_info_day, day_120)
     return filtered_df
 
-def scrap_sub_data():
+def scrap_sub_data(end_info_day, day_120):
     # 다우존스 지수 
     warnings.simplefilter(action='ignore', category=FutureWarning) # FutureWarning 제거
     # DJI_df = fdr.DataReader('DJI',day_120,today).reset_index().drop(
@@ -174,7 +243,7 @@ def scrap_sub_data():
     #         'Close':'DJI_Clo','Volume':'DJI_Vol'}).round(2)
 
     # 나스닥 지수
-    IXIC_df = fdr.DataReader('IXIC',day_120,today).reset_index().drop(
+    IXIC_df = fdr.DataReader('IXIC',day_120,end_info_day).reset_index().drop(
         ['Open','High','Low','Adj Close'], axis=1).rename(
             columns={'Close':'IXIC_Clo','Volume':'IXIC_Vol'}).round(2)
 
@@ -184,18 +253,18 @@ def scrap_sub_data():
     #         'Close':'SP5_Clo','Volume':'SP5_Vol'}).round(2)
 
     # VIX 지수 
-    VIX_df = fdr.DataReader('VIX',day_120,today).reset_index().drop(
+    VIX_df = fdr.DataReader('VIX',day_120,end_info_day).reset_index().drop(
         ['Open','High','Low','Volume','Adj Close'], axis=1).rename(
             columns={'Close':'VIX_Clo'}).round(2)
 
 
     # 코스피 지수 
-    KSI_df = fdr.DataReader('KS11',day_120,today).reset_index().drop(
+    KSI_df = fdr.DataReader('KS11',day_120,end_info_day).reset_index().drop(
         ['Open','High','Low','Adj Close'], axis=1).rename(columns={
             'Close':'KSI_Clo','Volume':'KSI_Vol'}).round(2)
 
     # 원/달러 환율 
-    USD_df = fdr.DataReader('USD/KRW',day_120,today).reset_index().drop(
+    USD_df = fdr.DataReader('USD/KRW',day_120,end_info_day).reset_index().drop(
         ['Open','High','Low','Adj Close','Volume'], axis=1).rename(columns={
             'Close':'USD/KRW_CLO'}).round(2)
 
@@ -208,40 +277,31 @@ def scrap_sub_data():
     #M2 통화량 
     M2SL_df_b = fdr.DataReader('FRED:M2SL', day_120)
     #CPI 지표
-    CPI_df_b = CPI()
+    CPI_df_b = CPI(end_info_day, day_120)
     #연준 기준금리
-    FDR_df = FED_RATE().reset_index().rename(columns={'date':'Date'}).round(2)
+    FDR_df = FED_RATE(end_info_day, day_120).reset_index().rename(columns={'date':'Date'}).round(2)
 
     #월단위 데이터 일단위로 변환
-    CPI_df = m_df_to_d_df(CPI_df_b).reset_index().rename(columns={'index':'Date'}).round(2)
-    M2SL_df = m_df_to_d_df(M2SL_df_b).reset_index().rename(columns={'index':'Date'}).round(2)
-    UMCSENT_df = m_df_to_d_df(UMCSENT_df_b).reset_index().rename(columns={'index':'Date'}).round(2)
+    CPI_df = m_df_to_d_df(CPI_df_b, end_info_day, day_120).reset_index().rename(columns={'index':'Date'}).round(2)
+    M2SL_df = m_df_to_d_df(M2SL_df_b, end_info_day, day_120).reset_index().rename(columns={'index':'Date'}).round(2)
+    UMCSENT_df = m_df_to_d_df(UMCSENT_df_b, end_info_day, day_120).reset_index().rename(columns={'index':'Date'}).round(2)
 
     # #데이터프레임 병합
     data_df = [IXIC_df,VIX_df,KSI_df,USD_df,UMCSENT_df,M2SL_df,CPI_df,FDR_df]
     dataset_df = reduce(lambda x,y : pd.merge(x,y,on='Date'),data_df)
 
     # 주식시장 개장일만 분류
-    filtered_df = filter_df(dataset_df)
+    filtered_df = filter_df(dataset_df, end_info_day, day_120)
     return filtered_df
 
-def add_row(list):
-    # 데이터프레임의 'Date' 열의 최하단 값 가져오기
-    last_date = list['Date'].iloc[-1]
-
-    # 최하단 값과 특정 값 비교
-    while last_date != specific_value:
-        # 'Date' 열을 하루씩 늘리기
-        last_date = last_date + timedelta(days=1)
-        
-        # 나머지 열의 최하단 값을 복사하여 새로운 행 추가
-        new_row = {'Date': last_date}
-        for col in list.columns:
-            if col != 'Date':
-                new_row[col] = list[col].iloc[-1]
-        
-        # 새로운 행을 데이터프레임에 추가
-        list = pd.concat([list, pd.DataFrame(new_row, index=[0])], ignore_index=True)
-    return list
-
-sub_list = scrap_sub_data()
+if __name__ == '__main__':
+    date_info()
+    ticker_list()
+    CPI()
+    FED_RATE()
+    Data_Scrap_Pred()
+    merging_stock_data()
+    m_df_to_d_df()
+    filter_df()
+    scrap_stock_data()
+    scrap_sub_data()
