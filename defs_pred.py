@@ -7,15 +7,15 @@ import warnings
 import time
 import ta
 
-from pykrx import stock
 from marcap import marcap_data
+from pykrx import stock
 from PublicDataReader import Fred
 from datetime import datetime, timedelta
 from functools import reduce
 
 #날자 변수 생성
 def date_info():
-    targer_day = datetime(year=2023,month=11,day=9) 
+    targer_day = datetime(year=2024,month=1,day=10) 
 
     if targer_day.strftime('%a') == 'Mon':
         end_info_day = (targer_day - timedelta(days=3))
@@ -41,13 +41,17 @@ def ticker_list():
     kosdaq = fdr.StockListing('KOSDAQ')
 
     # 거래량이 0이 아닌 종목 필터링
-    kospi = kospi[kospi['Volume'] > 1000]
-    kosdaq = kosdaq[kosdaq['Volume'] > 1000]
+    kospi = kospi[kospi['Volume'] >= 150000]
+    kospi = kospi[kospi['Open'] > 5000]
+
+    kosdaq = kosdaq[kosdaq['Volume'] >= 150000]
+    kosdaq = kosdaq[kosdaq['Open'] > 5000]
 
     # code = pd.DataFrame(kospi['Code'])
     code = pd.concat([kospi['Code'],kosdaq['Code']],axis=0)
 
     code_list = [item for item in code if not any(char.isalpha() for char in item)]
+    print(len(code_list))
     return code_list
 
 def CPI(end_info_day, day_120) -> pd.DataFrame:
@@ -153,7 +157,7 @@ def merging_stock_data(code,s_list, end_info_day, day_120):
     #inf 값 Nan으로 대체
     total_list.replace([np.inf, -np.inf], np.nan, inplace=True)
     #Nan값 없애고 리스트화
-    total_list = total_list.dropna(axis=0).reset_index(drop=True).tail(3).values.tolist()
+    total_list = total_list.dropna(axis=0).reset_index(drop=True).tail(1).values.tolist()
     for row in total_list:
         row.insert(0,code)
         merge_stock_list.append(row)
@@ -198,29 +202,61 @@ def scrap_stock_data(code, end_info_day, day_120):
     H, L, C, V = stock_df['High'], stock_df['Low'], stock_df['Close'], stock_df['Volume']
     #해당 종목 EMA
     stock_df['EMA'] = ta.trend.ema_indicator(close=C, fillna=True).round(2)
+    time.sleep(0.1)
     #해당 종목 SMA
     stock_df['SMA'] = ta.trend.sma_indicator(close=C, fillna=True).round(2)
+    time.sleep(0.1)
     #해당 종목 RSI
     stock_df['RSI'] = ta.momentum.rsi(close=C, fillna=True).round(2)
+    time.sleep(0.1)
     #해당 종목 MFI
     stock_df['MFI'] = ta.volume.money_flow_index(high=H, low=L, close=C, volume=V, fillna=True).round(2)
+    time.sleep(0.1)
     #해당 종목 상승률
     stock_df['Change'] = (stock_df['Change']*100).round(2)
     #해당 종목 VPT
     stock_df['VPT'] = ta.volume.volume_price_trend(close=C, volume=V).round(2)
+    time.sleep(0.1)
     #해당 종목 일목균형표
     stock_df['VI'] = ta.trend.vortex_indicator_pos(high=H,low=L,close=C,fillna=True).round(2)
+    time.sleep(0.1)
+    
     # #해당 종목 체결강도
     # if stock.get_market_trading_volume_by_date(day_120,end_info_day, code, on='매수').empty:
-    #     vp_df = 100
+    #     time.sleep(0.15)
+    #     vp_df = 0
     # else :
-    #     time.sleep(0.1)
+    #     time.sleep(0.15)
     #     buy_df = stock.get_market_trading_volume_by_date(day_120,end_info_day, code, on='매수').iloc[:,2].reset_index()
-    #     time.sleep(0.1)
+    #     time.sleep(0.15)
     #     sell_df = stock.get_market_trading_volume_by_date(day_120,end_info_day, code, on='매도').iloc[:,2].reset_index()
     #     #해당 종목 체결강도
     #     vp_df = (buy_df.iloc[:,1]/sell_df.iloc[:,1]*100).round(2)
     # stock_df['VP'] = vp_df
+
+    # buy_df = stock.get_market_trading_volume_by_date(day_120,end_info_day, code, on='매수').iloc[:,2].reset_index()
+    # time.sleep(0.1)
+    # sell_df = stock.get_market_trading_volume_by_date(day_120,end_info_day, code, on='매도').iloc[:,2].reset_index()
+    # #해당 종목 체결강도
+    # vp_df = (buy_df.iloc[:,1]/sell_df.iloc[:,1]*100).round(2)
+    # stock_df['VP'] = vp_df
+
+    #해당 종목 Bolinger Bend
+    stock_df['BB'] = ta.volatility.bollinger_hband(close=C,window=7,window_dev=2,fillna=True).round(2)
+    time.sleep(0.1)
+    #해당 종목 MACD
+    stock_df['MACD_L'] = ta.trend.MACD(close=C,window_fast=12,window_slow=26,window_sign=9,fillna=False).macd().round(2)
+    time.sleep(0.05)
+    stock_df['MACD_S'] = ta.trend.MACD(close=C,window_fast=12,window_slow=26,window_sign=9,fillna=False).macd_signal().round(2)
+    time.sleep(0.05)
+    #해당 종목 SR
+    stock_df['SR'] = ta.momentum.StochasticOscillator(close=C,high=H,low=L,window=14,smooth_window=3,fillna=False).stoch().round(2)
+    time.sleep(0.05)
+    stock_df['SR_S'] = ta.momentum.StochasticOscillator(close=C,high=H,low=L,window=14,smooth_window=3,fillna=False).stoch_signal().round(2)
+    time.sleep(0.05)
+
+    #해당종목 WR
+    stock_df['WR'] = ta.momentum.WilliamsRIndicator(high=H,low=L,close=C,lbp=14,fillna=False).williams_r().round(2)
 
     #해당 종목 시가총액, 거래대금, 주식수
     M_df = marcap_data(day_120,end_info_day,code=code)
@@ -236,62 +272,55 @@ def scrap_stock_data(code, end_info_day, day_120):
     return filtered_df
 
 def scrap_sub_data(end_info_day, day_120):
-    # 다우존스 지수 
     warnings.simplefilter(action='ignore', category=FutureWarning) # FutureWarning 제거
-    # DJI_df = fdr.DataReader('DJI',day_120,today).reset_index().drop(
-    #     ['Open','High','Low','Adj Close'], axis=1).rename(columns={
-    #         'Close':'DJI_Clo','Volume':'DJI_Vol'}).round(2)
-
+    
     # 나스닥 지수
     IXIC_df = fdr.DataReader('IXIC',day_120,end_info_day).reset_index().drop(
         ['Open','High','Low','Adj Close'], axis=1).rename(
             columns={'Close':'IXIC_Clo','Volume':'IXIC_Vol'}).round(2)
 
     # # S&P500 지수 
-    # SP5_df = fdr.DataReader('US500',day_120,today).reset_index().drop(
+    # SP5_df = fdr.DataReader('US500',day_120,end_info_day).reset_index().drop(
     #     ['Open','High','Low','Adj Close'], axis=1).rename(columns={
     #         'Close':'SP5_Clo','Volume':'SP5_Vol'}).round(2)
 
-    # VIX 지수 
-    VIX_df = fdr.DataReader('VIX',day_120,end_info_day).reset_index().drop(
-        ['Open','High','Low','Volume','Adj Close'], axis=1).rename(
-            columns={'Close':'VIX_Clo'}).round(2)
-
+    # # VIX 지수 
+    # VIX_df = fdr.DataReader('VIX',day_120,end_info_day).reset_index().drop(
+    #     ['Open','High','Low','Volume','Adj Close'], axis=1).rename(
+    #         columns={'Close':'VIX_Clo'}).round(2)
 
     # 코스피 지수 
     KSI_df = fdr.DataReader('KS11',day_120,end_info_day).reset_index().drop(
         ['Open','High','Low','Adj Close'], axis=1).rename(columns={
             'Close':'KSI_Clo','Volume':'KSI_Vol'}).round(2)
 
-    # 원/달러 환율 
-    USD_df = fdr.DataReader('USD/KRW',day_120,end_info_day).reset_index().drop(
-        ['Open','High','Low','Adj Close','Volume'], axis=1).rename(columns={
-            'Close':'USD/KRW_CLO'}).round(2)
+    # # 원/달러 환율 
+    # USD_df = fdr.DataReader('USD/KRW',day_120,end_info_day).reset_index().drop(
+    #     ['Open','High','Low','Adj Close','Volume'], axis=1).rename(columns={
+    #         'Close':'USD/KRW_CLO'}).round(2)
 
-    # # 미국 국채 금리 (20,10,5,1년) 
-    # DGS_df = fdr.DataReader('FRED:DGS20,DGS10,DGS5,DGS1', day_120
-    #                         ).reset_index().rename(columns={'DATE':'Date'}).round(2)
+    # #미국 소비자심리 지수(CSI) 
+    # UMCSENT_df_b = fdr.DataReader('FRED:UMCSENT', day_120)
+    # #M2 통화량 
+    # M2SL_df_b = fdr.DataReader('FRED:M2SL', day_120)
+    # #CPI 지표
+    # CPI_df_b = CPI(end_info_day, day_120)
+    # #연준 기준금리
+    # FDR_df = FED_RATE(end_info_day, day_120).reset_index().rename(columns={'date':'Date'}).round(2)
 
-    #미국 소비자심리 지수(CSI) 
-    UMCSENT_df_b = fdr.DataReader('FRED:UMCSENT', day_120)
-    #M2 통화량 
-    M2SL_df_b = fdr.DataReader('FRED:M2SL', day_120)
-    #CPI 지표
-    CPI_df_b = CPI(end_info_day, day_120)
-    #연준 기준금리
-    FDR_df = FED_RATE(end_info_day, day_120).reset_index().rename(columns={'date':'Date'}).round(2)
+    # #월단위 데이터 일단위로 변환
+    # CPI_df = m_df_to_d_df(CPI_df_b, end_info_day, day_120).reset_index().rename(columns={'index':'Date'}).round(2)
+    # M2SL_df = m_df_to_d_df(M2SL_df_b, end_info_day, day_120).reset_index().rename(columns={'index':'Date'}).round(2)
+    # UMCSENT_df = m_df_to_d_df(UMCSENT_df_b, end_info_day, day_120).reset_index().rename(columns={'index':'Date'}).round(2)
+    # SP5_df,VIX_df,,UMCSENT_df,M2SL_df,CPI_df,FDR_df,USD_df
 
-    #월단위 데이터 일단위로 변환
-    CPI_df = m_df_to_d_df(CPI_df_b, end_info_day, day_120).reset_index().rename(columns={'index':'Date'}).round(2)
-    M2SL_df = m_df_to_d_df(M2SL_df_b, end_info_day, day_120).reset_index().rename(columns={'index':'Date'}).round(2)
-    UMCSENT_df = m_df_to_d_df(UMCSENT_df_b, end_info_day, day_120).reset_index().rename(columns={'index':'Date'}).round(2)
-
-    # #데이터프레임 병합
-    data_df = [IXIC_df,VIX_df,KSI_df,USD_df,UMCSENT_df,M2SL_df,CPI_df,FDR_df]
+    # #데이터프레임 병합 
+    data_df = [KSI_df,IXIC_df]
     dataset_df = reduce(lambda x,y : pd.merge(x,y,on='Date'),data_df)
 
     # 주식시장 개장일만 분류
     filtered_df = filter_df(dataset_df, end_info_day, day_120)
+
     return filtered_df
 
 if __name__ == '__main__':
