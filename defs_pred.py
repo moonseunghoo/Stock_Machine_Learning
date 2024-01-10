@@ -15,7 +15,7 @@ from functools import reduce
 
 #날자 변수 생성
 def date_info():
-    targer_day = datetime(year=2024,month=1,day=10) 
+    targer_day = datetime(year=2024,month=1,day=9) 
 
     if targer_day.strftime('%a') == 'Mon':
         end_info_day = (targer_day - timedelta(days=3))
