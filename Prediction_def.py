@@ -46,7 +46,7 @@ def Prediction():
     # 불필요한 데이터 삭제
     filter_pred = filter_pred.drop({'0','1','7'},axis=1) #종목코드, 날자, 상승율 삭제
     
-    model_1 = tf.keras.models.load_model("GRU_Model_7L_15_5%.h5")
+    model_1 = tf.keras.models.load_model("GRU_Model_9L_18_5%.h5")
     Pred = model_1.predict(filter_pred)
 
     # 5% 이상 오를 종목 식별

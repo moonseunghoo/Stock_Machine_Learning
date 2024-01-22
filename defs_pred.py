@@ -15,7 +15,7 @@ from functools import reduce
 
 #날자 변수 생성
 def date_info():
-    targer_day = datetime(year=2024,month=1,day=9) 
+    targer_day = datetime(year=2024,month=1,day=19) 
 
     if targer_day.strftime('%a') == 'Mon':
         end_info_day = (targer_day - timedelta(days=3))
@@ -41,10 +41,10 @@ def ticker_list():
     kosdaq = fdr.StockListing('KOSDAQ')
 
     # 거래량이 0이 아닌 종목 필터링
-    kospi = kospi[kospi['Volume'] >= 150000]
+    kospi = kospi[kospi['Volume'] >= 200000]
     kospi = kospi[kospi['Open'] > 5000]
 
-    kosdaq = kosdaq[kosdaq['Volume'] >= 150000]
+    kosdaq = kosdaq[kosdaq['Volume'] >= 200000]
     kosdaq = kosdaq[kosdaq['Open'] > 5000]
 
     # code = pd.DataFrame(kospi['Code'])
@@ -258,17 +258,18 @@ def scrap_stock_data(code, end_info_day, day_120):
     #해당종목 WR
     stock_df['WR'] = ta.momentum.WilliamsRIndicator(high=H,low=L,close=C,lbp=14,fillna=False).williams_r().round(2)
 
-    #해당 종목 시가총액, 거래대금, 주식수
-    M_df = marcap_data(day_120,end_info_day,code=code)
-    selected_colums = ['Amount','Marcap','Stocks']
-    M_df = M_df[selected_colums].reset_index()
+    # #해당 종목 시가총액, 거래대금, 주식수
+    # M_df = marcap_data(day_120,end_info_day,code=code)
+    # selected_colums = ['Amount','Marcap','Stocks']
+    # M_df = M_df[selected_colums].reset_index()
+    # print(M_df.tail(1))
 
-    #데이터 병합
-    merge_df = [stock_df,M_df]
-    dataset_df = reduce(lambda x,y : pd.merge(x,y,on='Date'),merge_df)
+    # #데이터 병합
+    # merge_df = [stock_df,M_df]
+    # dataset_df = reduce(lambda x,y : pd.merge(x,y,on='Date'),merge_df)
 
     #주식시장 개장일만 분류
-    filtered_df = filter_df(dataset_df, end_info_day, day_120)
+    filtered_df = filter_df(stock_df, end_info_day, day_120)
     return filtered_df
 
 def scrap_sub_data(end_info_day, day_120):
