@@ -127,12 +127,13 @@ def Data_Scrap():
 
     return s_df
 
-def merging_stock_data(code,s_list):
+def merging_stock_data(code, s_list):
     merge_stock_list = []
     sub_list = s_list
     stock_list = scrap_stock_data(code)
     #data열을 기준으로 2개의 데이터프레임 병합
     total_list = pd.merge(stock_list,sub_list,how='outer',on='Date')
+    # total_list = stock_list
     #inf 값 Nan값으로 대체
     total_list.replace([np.inf, -np.inf], np.nan, inplace=True)
     #Nan값 없애고 리스트화
@@ -220,56 +221,30 @@ def scrap_stock_data(code):
     #y 라벨 결과 데이터프레임 
     stock_df['Label'] = (stock_df['Change'] >= 5)
 
+    #해당 종목 시가총액, 거래대금, 주식수
+    M_df = marcap_data('2022-01-01','2023-12-29',code=code)
+    selected_colums = ['Marcap','Amount','Stocks']
+    M_df = M_df[selected_colums].reset_index()
+
+    #데이터 병합
+    merge_df = [stock_df,M_df]
+    dataset_df = reduce(lambda x,y : pd.merge(x,y,on='Date'),merge_df)
+
     #주식시장 개장일만 분류
-    filtered_df = filter_df(stock_df)
+    filtered_df = filter_df(dataset_df)
 
     return filtered_df
 
 def scrap_sub_data():
     warnings.simplefilter(action='ignore', category=FutureWarning) # FutureWarning 제거
 
-    # 나스닥 지수
-    IXIC_df = fdr.DataReader('IXIC', '2020-01-01','2023-12-29').reset_index().drop(
-        ['Open','High','Low','Adj Close'], axis=1).rename(
-            columns={'Close':'IXIC_Clo','Volume':'IXIC_Vol'}).round(2)
-    # # S&P500 지수 
-    # SP5_df = fdr.DataReader('US500','2019-01-01','2023-12-29').reset_index().drop(
-    #     ['Open','High','Low','Adj Close'], axis=1).rename(
-    #         columns={'Close':'SP5_Clo','Volume':'SP5_Vol'}).round(2)
-    # # VIX 지수 
-    # VIX_df = fdr.DataReader('VIX','2020-01-01','2023-12-29').reset_index().drop(
-    #     ['Open','High','Low','Volume','Adj Close'], axis=1).rename(
-    #         columns={'Close':'VIX_Clo'}).round(2)
     # 코스피 지수 
     KSI_df = fdr.DataReader('KS11','2020-01-01','2023-12-29').reset_index().drop(
         ['Open','High','Low','Adj Close'], axis=1).rename(
             columns={'Close':'KSI_Clo','Volume':'KSI_Vol'}).round(2)
-    # # 원/달러 환율 
-    # USD_df = fdr.DataReader('USD/KRW','2020-01-01','2023-12-29').reset_index().drop(
-    #     ['Open','High','Low','Adj Close','Volume'], axis=1).rename(
-    #         columns={'Close':'USD/KRW_CLO'}).round(2)
-
-    # #미국 소비자심리 지수(CSI) 
-    # UMCSENT_df_b = fdr.DataReader('FRED:UMCSENT', '2020-01-01').round(2)
-    # #M2 통화량 
-    # M2SL_df_b = fdr.DataReader('FRED:M2SL', '2020-01-01').round(2)
-    # #CPI 지표
-    # CPI_df_b = CPI()
-    # #연준 기준금리
-    # FDR_df_b = FED_RATE()
-
-    # #월단위 데이터 일단위로 변환
-    # CPI_df = m_df_to_d_df(CPI_df_b).reset_index().rename(columns={'index':'Date'}).round(2)
-    # FDR_df = m_df_to_d_df(FDR_df_b).reset_index().rename(columns={'index':'Date'}).round(2)
-    # M2SL_df = m_df_to_d_df(M2SL_df_b).reset_index().rename(columns={'index':'Date'}).round(2)
-    # UMCSENT_df = m_df_to_d_df(UMCSENT_df_b).reset_index().rename(columns={'index':'Date'}).round(2)
-    # SP5_df,VIX_df,KSI_df,UMCSENT_df,M2SL_df,CPI_df,FDR_df,USD_df
-    # #데이터프레임 병합
-    data_df = [KSI_df,IXIC_df]
-    dataset_df = reduce(lambda x,y : pd.merge(x,y,on='Date'),data_df)
-
+   
     # 주식시장 개장일만 분류
-    filtered_df = filter_df(dataset_df)
+    filtered_df = filter_df(KSI_df)
     return filtered_df
 
 if __name__ == '__main__':
