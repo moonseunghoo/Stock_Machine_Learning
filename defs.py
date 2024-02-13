@@ -92,11 +92,11 @@ def ticker_list():
     kosdaq = fdr.StockListing('KOSDAQ')
 
     # 거래량이 10,000이상, 1000원 이상인 종목 필터링
-    kospi = kospi[kospi['Volume'] > 2000]
-    kospi = kospi[kospi['Open'] > 2000]
+    kospi = kospi[kospi['Volume'] > 1000]
+    kospi = kospi[kospi['Open'] > 1000]
     
-    kosdaq = kosdaq[kosdaq['Volume'] > 2000]
-    kosdaq = kosdaq[kosdaq['Open'] > 2000]
+    kosdaq = kosdaq[kosdaq['Volume'] > 1000]
+    kosdaq = kosdaq[kosdaq['Open'] > 1000]
 
     # code = pd.DataFrame(kospi['Code'])
     code = pd.concat([kospi['Code'],kosdaq['Code']],axis=0)
@@ -147,7 +147,7 @@ def merging_stock_data(code, s_list):
 def m_df_to_d_df(m_df):
 
     start_date = '2020-01-01'
-    end_date = '2023-12-29'
+    end_date = '2024-02-01'
     date_range = pd.date_range(start_date,end_date,freq='D')
     ch_df = m_df.reindex(date_range).fillna(method='ffill')
 
@@ -159,7 +159,7 @@ def filter_df(df):
     # 한국 주식시장(KRX)의 개장일 캘린더 생성
     krx = mcal.get_calendar('XKRX')
     # 개장일 가져오기
-    schedule = krx.schedule('2020-01-01','2023-12-29')
+    schedule = krx.schedule('2020-01-01','2024-02-01')
     # break_start,break_end 제거
     krx.remove_time(market_time='break_start')
     krx.remove_time(market_time='break_end')
@@ -173,12 +173,15 @@ def filter_df(df):
 def scrap_stock_data(code):
     warnings.simplefilter(action='ignore', category=FutureWarning) # FutureWarning 제거
     
-    stock_df = fdr.DataReader(code,'2020-01-01','2023-12-29').reset_index()
+    stock_df = fdr.DataReader(code,'2020-01-01','2024-02-01').reset_index()
 
     # 이동평균선 5,20,60,200
     ma = [5,20,60,120]
     for days in ma:
         stock_df['ma_'+str(days)] = stock_df['Close'].rolling(window = days).mean().round(2)
+
+    #52주 최고가
+    stock_df['52HIGH'] = stock_df['Close'].rolling(window=252, min_periods=1).max()
 
     H, L, C, V = stock_df['High'], stock_df['Low'], stock_df['Close'], stock_df['Volume']
     #해당 종목 EMA
@@ -219,10 +222,16 @@ def scrap_stock_data(code):
     stock_df['WR'] = ta.momentum.WilliamsRIndicator(high=H,low=L,close=C,lbp=14,fillna=False).williams_r().round(2)
 
     #y 라벨 결과 데이터프레임 
-    stock_df['Label'] = (stock_df['Change'] >= 5)
+    # stock_df['Label'] = (stock_df['Change'] >= 5)
+    label_df = pd.DataFrame()
+    label_df['전일종가'] = stock_df['Close'].shift(1)
+    label_df['고가변동'] = (stock_df['High'] - label_df['전일종가']) / label_df['전일종가'] * 100
+
+    # '고가변동' 열이 3% 이상인 경우 'Label' 열에 True를 추가합니다.
+    stock_df['Label'] = label_df['고가변동'] >= 3.3
 
     #해당 종목 시가총액, 거래대금, 주식수
-    M_df = marcap_data('2022-01-01','2023-12-29',code=code)
+    M_df = marcap_data('2020-01-01','2024-02-01',code=code)
     selected_colums = ['Marcap','Amount','Stocks']
     M_df = M_df[selected_colums].reset_index()
 
@@ -239,7 +248,7 @@ def scrap_sub_data():
     warnings.simplefilter(action='ignore', category=FutureWarning) # FutureWarning 제거
 
     # 코스피 지수 
-    KSI_df = fdr.DataReader('KS11','2020-01-01','2023-12-29').reset_index().drop(
+    KSI_df = fdr.DataReader('KS11','2020-01-01','2024-02-01').reset_index().drop(
         ['Open','High','Low','Adj Close'], axis=1).rename(
             columns={'Close':'KSI_Clo','Volume':'KSI_Vol'}).round(2)
    
