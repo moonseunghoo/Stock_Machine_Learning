@@ -251,6 +251,22 @@ def scrap_sub_data():
     KSI_df = fdr.DataReader('KS11','2020-01-01','2024-02-01').reset_index().drop(
         ['Open','High','Low','Adj Close'], axis=1).rename(
             columns={'Close':'KSI_Clo','Volume':'KSI_Vol'}).round(2)
+    
+    # 나스닥 지수
+    # IXIC_df = fdr.DataReader('IXIC','2020-01-01','2024-02-01').reset_index().drop(
+    #     ['Open','High','Low','Adj Close'], axis=1).rename(
+    #         columns={'Close':'IXIC_Clo','Volume':'IXIC_Vol'}).round(2)
+
+    # def shift_date(row):
+    #     if row['Date'].weekday() == 4:  # 금요일이면
+    #         return row['Date'] + pd.Timedelta(days=3)
+    #     else:
+    #         return row['Date'] + pd.Timedelta(days=1)
+
+    # IXIC_df['Date'] = IXIC_df.apply(shift_date, axis=1)
+
+    # data_df = [KSI_df,IXIC_df]
+    # dataset_df = reduce(lambda x,y : pd.merge(x,y,on='Date'),data_df)
    
     # 주식시장 개장일만 분류
     filtered_df = filter_df(KSI_df)

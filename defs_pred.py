@@ -15,7 +15,7 @@ from functools import reduce
 
 #날자 변수 생성
 def date_info():
-    targer_day = datetime(year=2024,month=2,day=14)
+    targer_day = datetime(year=2024,month=2,day=16)
 
     if targer_day.strftime('%a') == 'Mon':
         end_info_day = (targer_day - timedelta(days=3))
@@ -42,8 +42,8 @@ def add_52_week_high_info(series):
 
     for stock_code in series:
         # 오늘 날짜
-        end_date = datetime.today().strftime('%Y-%m-%d')
-        # end_date = datetime(year=2023, month=10, day=31)
+        # end_date = datetime.today()
+        end_date = datetime(year=2024, month=2, day=15)
         # 10일 전 날짜 계산
         start_date = (end_date - timedelta(days=10)).strftime('%Y-%m-%d')
 
@@ -76,16 +76,16 @@ def add_52_week_high_info(series):
 
 #종목코드 생성
 def ticker_list():
-    kospi = fdr.StockListing('KOSPI')
-    kospi = kospi['Code']
-    kosdaq = fdr.StockListing('KOSDAQ')
-    kosdaq = kosdaq['Code']
-    code = pd.concat([kospi,kosdaq],axis=0)
-    # a = stock.get_market_ticker_list("20231030", market="KOSPI")
-    # b = stock.get_market_ticker_list("20231030", market="KOSDAQ")
-    # kospi = pd.Series(a)
-    # kosdaq = pd.Series(b)
+    # kospi = fdr.StockListing('KOSPI')
+    # kospi = kospi['Code']
+    # kosdaq = fdr.StockListing('KOSDAQ')
+    # kosdaq = kosdaq['Code']
     # code = pd.concat([kospi,kosdaq],axis=0)
+    a = stock.get_market_ticker_list("20240215", market="KOSPI")
+    b = stock.get_market_ticker_list("20240215", market="KOSDAQ")
+    kospi = pd.Series(a)
+    kosdaq = pd.Series(b)
+    code = pd.concat([kospi,kosdaq],axis=0)
 
     # 데이터프레임 생성 
     result_df = add_52_week_high_info(code)
@@ -103,10 +103,10 @@ def ticker_list():
     return top_100_list
 
 def Marcap():
-    marcap = pd.read_csv('/Users/moon/Desktop/Moon SeungHoo/Stock_Machine_Learning/KRX/marcap/240213.csv', low_memory=False, encoding='euc-kr')
+    marcap = pd.read_csv('/Users/moon/Desktop/Moon SeungHoo/Stock_Machine_Learning/KRX/marcap/240215.csv', low_memory=False, encoding='euc-kr')
     # 거래량과 종가가 조건을 충족하지 못하는 종목 필터링
     marcap = marcap[marcap['거래량'] >= 500000]
-    marcap = marcap[(marcap['종가'] >= 1000) & (marcap['종가'] <= 50000)]
+    marcap = marcap[(marcap['종가'] > 5000) & (marcap['종가'] <= 50000)]
     marcap = marcap.drop(['종목명','시장구분','소속부','종가','대비','등락률','시가','고가','저가','거래량'],axis=1)
     
     return marcap
@@ -315,14 +315,15 @@ def scrap_stock_data(code,marcap, end_info_day, day_120):
 def scrap_sub_data(end_info_day, day_120):
     warnings.simplefilter(action='ignore', category=FutureWarning) # FutureWarning 제거
     # 코스피 지수 
-    kospi = pd.read_csv('/Users/moon/Desktop/Moon SeungHoo/Stock_Machine_Learning/KRX/kospi/240213.csv', low_memory=False, encoding='euc-kr')
+    kospi = pd.read_csv('/Users/moon/Desktop/Moon SeungHoo/Stock_Machine_Learning/KRX/kospi/240215.csv', low_memory=False, encoding='euc-kr')
     kospi = kospi.drop(['대비','등락률','시가','고가','저가','거래대금','상장시가총액'],axis=1)
 
     rows = kospi[kospi['지수명'] == '코스피'].rename(columns={'지수명': 'Date'})
     rows['거래량'] = rows['거래량'].astype(int)
-    # rows.loc[:, 'Date'] = pd.to_datetime('2024-01-25')
-    rows = rows.replace({'Date' : '코스피'}, pd.to_datetime('2024-02-13'))
-    return rows
+    rows = rows.replace({'Date' : '코스피'}, pd.to_datetime('2024-02-15'))
+
+    filtered_df = filter_df(rows, end_info_day, day_120)
+    return filtered_df
 
 if __name__ == '__main__':
     date_info()
