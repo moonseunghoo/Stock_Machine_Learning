@@ -107,7 +107,7 @@ def ticker_list():
 
 def Data_Scrap():
     code_list = ticker_list()
-    # code_list = ['352820']
+    # code_list = ['005930']
 
     stock_data = []
     #보조지표 df 생성
@@ -116,14 +116,15 @@ def Data_Scrap():
     input_data = [(code_list, s_list) for code_list in code_list]
     ## 멀티 프로세싱 ###
     p = multiprocessing.Pool(processes=8)
-    for row in p.starmap(merging_stock_data, input_data):
+    for row, column_names in p.starmap(merging_stock_data, input_data):
         stock_data += row
     p.close()
     p.join()
-    s_df = pd.DataFrame(stock_data)
+    column_names.insert(0,'Ticker')
+    s_df = pd.DataFrame(stock_data, columns=column_names)
     #timestamp 형식 int로 변환'
-    s_df[1] = s_df[1].dt.year * 10000 + s_df[1].dt.month * 100 + s_df[1].dt.day
-    s_df = s_df[~s_df[0].str.contains('K|L|M')]
+    s_df['Date'] = s_df['Date'].dt.year * 10000 + s_df['Date'].dt.month * 100 + s_df['Date'].dt.day
+    s_df = s_df[~s_df['Ticker'].str.contains('K|L|M')]
 
     return s_df
 
@@ -133,21 +134,21 @@ def merging_stock_data(code, s_list):
     stock_list = scrap_stock_data(code)
     #data열을 기준으로 2개의 데이터프레임 병합
     total_list = pd.merge(stock_list,sub_list,how='outer',on='Date')
-    # total_list = stock_list
     #inf 값 Nan값으로 대체
     total_list.replace([np.inf, -np.inf], np.nan, inplace=True)
+    column_names = total_list.columns.tolist()
     #Nan값 없애고 리스트화
     total_list = total_list.dropna(axis=0).reset_index(drop=True).values.tolist()
     #각 행에 종목코드 추가
     for row in total_list:
         row.insert(0,code)
         merge_stock_list.append(row)
-    return merge_stock_list
+    return merge_stock_list, column_names
 
 def m_df_to_d_df(m_df):
 
     start_date = '2020-01-01'
-    end_date = '2024-02-01'
+    end_date = '2024-02-16'
     date_range = pd.date_range(start_date,end_date,freq='D')
     ch_df = m_df.reindex(date_range).fillna(method='ffill')
 
@@ -159,7 +160,7 @@ def filter_df(df):
     # 한국 주식시장(KRX)의 개장일 캘린더 생성
     krx = mcal.get_calendar('XKRX')
     # 개장일 가져오기
-    schedule = krx.schedule('2020-01-01','2024-02-01')
+    schedule = krx.schedule('2020-01-01','2024-02-16')
     # break_start,break_end 제거
     krx.remove_time(market_time='break_start')
     krx.remove_time(market_time='break_end')
@@ -172,16 +173,17 @@ def filter_df(df):
 
 def scrap_stock_data(code):
     warnings.simplefilter(action='ignore', category=FutureWarning) # FutureWarning 제거
-    
-    stock_df = fdr.DataReader(code,'2020-01-01','2024-02-01').reset_index()
-
+        
+    stock_df = fdr.DataReader(code,'2019-01-01','2024-02-16').reset_index()
     # 이동평균선 5,20,60,200
     ma = [5,20,60,120]
     for days in ma:
         stock_df['ma_'+str(days)] = stock_df['Close'].rolling(window = days).mean().round(2)
 
-    #52주 최고가
-    stock_df['52HIGH'] = stock_df['Close'].rolling(window=252, min_periods=1).max()
+    #52주 최고가 # 결과 다시 뒤집기
+    stock_df['52High'] = stock_df['High'].rolling(window=250).max()
+
+    stock_df['52Change'] = round((stock_df['Close'].shift(1) - stock_df['52High']) / stock_df['52High'], 3)
 
     H, L, C, V = stock_df['High'], stock_df['Low'], stock_df['Close'], stock_df['Volume']
     #해당 종목 EMA
@@ -231,7 +233,7 @@ def scrap_stock_data(code):
     stock_df['Label'] = label_df['고가변동'] >= 3.3
 
     #해당 종목 시가총액, 거래대금, 주식수
-    M_df = marcap_data('2020-01-01','2024-02-01',code=code)
+    M_df = marcap_data('2020-01-01','2024-02-16',code=code)
     selected_colums = ['Marcap','Amount','Stocks']
     M_df = M_df[selected_colums].reset_index()
 
@@ -248,26 +250,10 @@ def scrap_sub_data():
     warnings.simplefilter(action='ignore', category=FutureWarning) # FutureWarning 제거
 
     # 코스피 지수 
-    KSI_df = fdr.DataReader('KS11','2020-01-01','2024-02-01').reset_index().drop(
+    KSI_df = fdr.DataReader('KS11','2020-01-01','2024-02-16').reset_index().drop(
         ['Open','High','Low','Adj Close'], axis=1).rename(
             columns={'Close':'KSI_Clo','Volume':'KSI_Vol'}).round(2)
     
-    # 나스닥 지수
-    # IXIC_df = fdr.DataReader('IXIC','2020-01-01','2024-02-01').reset_index().drop(
-    #     ['Open','High','Low','Adj Close'], axis=1).rename(
-    #         columns={'Close':'IXIC_Clo','Volume':'IXIC_Vol'}).round(2)
-
-    # def shift_date(row):
-    #     if row['Date'].weekday() == 4:  # 금요일이면
-    #         return row['Date'] + pd.Timedelta(days=3)
-    #     else:
-    #         return row['Date'] + pd.Timedelta(days=1)
-
-    # IXIC_df['Date'] = IXIC_df.apply(shift_date, axis=1)
-
-    # data_df = [KSI_df,IXIC_df]
-    # dataset_df = reduce(lambda x,y : pd.merge(x,y,on='Date'),data_df)
-   
     # 주식시장 개장일만 분류
     filtered_df = filter_df(KSI_df)
     return filtered_df

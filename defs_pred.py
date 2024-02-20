@@ -19,68 +19,50 @@ def date_info():
 
     if targer_day.strftime('%a') == 'Mon':
         end_info_day = (targer_day - timedelta(days=3))
-        delta = timedelta(days=210)
+        delta = timedelta(days=375)
         day_120 = (end_info_day - delta).strftime("%Y-%m-%d")
-
-    elif targer_day.strftime('%a') == 'Tue':
-        end_info_day = (targer_day - timedelta(days=1))
-        delta = timedelta(days=210)
-        day_120 = (end_info_day - delta).strftime("%Y-%m-%d")
-
     else :
         end_info_day = (targer_day - timedelta(days=1))
-        delta = timedelta(days=210)
+        delta = timedelta(days=375)
         day_120 = (end_info_day - delta).strftime("%Y-%m-%d")
 
     return targer_day, end_info_day, day_120
 
-def add_52_week_high_info(series):
+def add_52_week_high_info(series, end_info_day):
     df = pd.DataFrame(series, columns=['Code'])
     high_52_week_list = []
     change_percentage_list = []
     average_volume_5_days = []
 
     for stock_code in series:
-        # 오늘 날짜
-        # end_date = datetime.today()
-        end_date = datetime(year=2024, month=2, day=15)
-        # 10일 전 날짜 계산
-        start_date = (end_date - timedelta(days=10)).strftime('%Y-%m-%d')
+    # 10일 전 날짜 계산
+        high_52_date = (end_info_day - timedelta(days=375)).strftime('%Y-%m-%d')
 
         # FinanceDataReader를 사용하여 주식 데이터 가져오기
-        stock_data = fdr.DataReader(stock_code, start=start_date, end=end_date)
-        stock_data = stock_data.tail(5)
-        
+        stock_data = fdr.DataReader(stock_code, start=high_52_date, end=end_info_day).reset_index()
+
         # 52주 최고가 계산
-        fifty_two_week_high = stock_data['Close'].rolling(window=252, min_periods=1).max()
-        recent_52_week_high = fifty_two_week_high.iloc[-1]
-    
-        # 최근 종가 구하기
-        recent_close = stock_data['Close'].iloc[-1]
+        rolling_result = stock_data['High'].rolling(window=250).max()
         
         # 최근 종가 대비 52주 최고가 대비 변동율 계산
-        change_percentage = ((recent_close - recent_52_week_high) / recent_52_week_high) * 100
+        change_percentage = round((stock_data['Close'].shift(1) - rolling_result) / rolling_result, 3)
 
         # 거래량(거래대금)의 평균 계산
+        stock_data = stock_data.tail(3)
         average_volume = int(stock_data['Volume'].mean())
         
-        high_52_week_list.append(recent_52_week_high)
-        change_percentage_list.append(change_percentage)
+        high_52_week_list.append(rolling_result.tail(1))
+        change_percentage_list.append(change_percentage.tail(1))
         average_volume_5_days.append(average_volume)
 
     df['52주 최고가'] = high_52_week_list
     df['52주 최고가 대비 변동율'] = change_percentage_list
-    df['5일 평균 거래량'] = average_volume_5_days
+    df['3일 평균 거래량'] = average_volume_5_days
 
     return df
 
 #종목코드 생성
-def ticker_list():
-    # kospi = fdr.StockListing('KOSPI')
-    # kospi = kospi['Code']
-    # kosdaq = fdr.StockListing('KOSDAQ')
-    # kosdaq = kosdaq['Code']
-    # code = pd.concat([kospi,kosdaq],axis=0)
+def ticker_list(end_info_day):
     a = stock.get_market_ticker_list("20240215", market="KOSPI")
     b = stock.get_market_ticker_list("20240215", market="KOSDAQ")
     kospi = pd.Series(a)
@@ -88,25 +70,25 @@ def ticker_list():
     code = pd.concat([kospi,kosdaq],axis=0)
 
     # 데이터프레임 생성 
-    result_df = add_52_week_high_info(code)
+    result_df = add_52_week_high_info(code, end_info_day)
 
-    result_df = result_df[result_df['5일 평균 거래량'] >= 500000]
+    result_df = result_df[result_df['3일 평균 거래량'] >= 5000000]
+    result_df['52주 최고가 대비 변동율'] = result_df['52주 최고가 대비 변동율'].apply(lambda x: float(x))
 
     # 변동율을 기준으로 내림차순 정렬
     sorted_df = result_df.sort_values(by='52주 최고가 대비 변동율', ascending=False)
 
     # 상위 100개만 선택하여 새로운 데이터프레임 생성
     top_100_df = sorted_df.head(100)
-    top_100_df = top_100_df.drop(['52주 최고가','52주 최고가 대비 변동율','5일 평균 거래량'],axis=1)
+    top_100_df = top_100_df.drop(['52주 최고가','52주 최고가 대비 변동율','3일 평균 거래량'],axis=1)
     top_100_list = top_100_df['Code'].tolist()
 
     return top_100_list
 
 def Marcap():
-    marcap = pd.read_csv('/Users/moon/Desktop/Moon SeungHoo/Stock_Machine_Learning/KRX/marcap/240215.csv', low_memory=False, encoding='euc-kr')
+    marcap = pd.read_csv('/Users/moon/Desktop/Moon SeungHoo/Stock_Machine_Learning/KRX/marcap/240215.csv', encoding='euc-kr')
     # 거래량과 종가가 조건을 충족하지 못하는 종목 필터링
-    marcap = marcap[marcap['거래량'] >= 500000]
-    marcap = marcap[(marcap['종가'] > 5000) & (marcap['종가'] <= 50000)]
+    marcap = marcap[(marcap['종가'] > 5000)]
     marcap = marcap.drop(['종목명','시장구분','소속부','종가','대비','등락률','시가','고가','저가','거래량'],axis=1)
     
     return marcap
@@ -180,14 +162,13 @@ def FED_RATE(end_info_day, day_120) -> pd.DataFrame:
     return df
  
 def Data_Scrap_Pred():
-    #종목코드 생성
-    code_list = ticker_list() 
-    # code_list = ['078890'] 
     #날자 변수 생성
     targer_day, end_info_day, day_120 = date_info()
+    #종목코드 생성
+    code_list = ticker_list(end_info_day) 
+    # code_list = ['222080'] 
 
     stock_data = []
-
     #marcap 
     marcap = Marcap()
     #보조지표 생성
@@ -196,14 +177,15 @@ def Data_Scrap_Pred():
     input_data = [(code_list,marcap, s_list, end_info_day, day_120) for code_list in code_list]
     ## 멀티 프로세싱 ###
     p = multiprocessing.Pool(processes=8)
-    for row in p.starmap(merging_stock_data, input_data):
+    for row, column_names in p.starmap(merging_stock_data, input_data):
         stock_data += row
     p.close()
     p.join()
-    s_df = pd.DataFrame(stock_data)
+    column_names.insert(0,'Ticker')
+    s_df = pd.DataFrame(stock_data, columns=column_names)
     #timestamp 형식 int로 변환
-    s_df[1] = s_df[1].dt.year * 10000 + s_df[1].dt.month * 100 + s_df[1].dt.day
-    s_df = s_df[~s_df[0].str.contains('K|L|M')]
+    s_df['Date'] = s_df['Date'].dt.year * 10000 + s_df['Date'].dt.month * 100 + s_df['Date'].dt.day
+    s_df = s_df[~s_df['Ticker'].str.contains('K|L|M')]
     
     return s_df
 
@@ -213,15 +195,15 @@ def merging_stock_data(code,marcap, s_list, end_info_day, day_120):
     stock_list = scrap_stock_data(code,marcap, end_info_day, day_120)
     #data열을 기준으로 2개의 데이터프레임 병합
     total_list = pd.merge(stock_list,sub_list,how='outer',on='Date')
-    # total_list = stock_list
     #inf 값 Nan으로 대체
     total_list.replace([np.inf, -np.inf], np.nan, inplace=True)
+    column_names = total_list.columns.tolist()
     #Nan값 없애고 리스트화
     total_list = total_list.dropna(axis=0).reset_index(drop=True).tail(1).values.tolist()
     for row in total_list:
         row.insert(0,code)
         merge_stock_list.append(row)
-    return merge_stock_list
+    return merge_stock_list, column_names
 
 def m_df_to_d_df(m_df, end_info_day, day_120):
 
@@ -260,7 +242,9 @@ def scrap_stock_data(code,marcap, end_info_day, day_120):
         stock_df['ma_'+str(days)] = stock_df['Close'].rolling(window = days).mean().round(2)
 
     #52주 최고가
-    stock_df['52HIGH'] = stock_df['Close'].rolling(window=252, min_periods=1).max()
+    stock_df['52High'] = stock_df['High'].rolling(window=250).max()
+
+    stock_df['52Change'] = round((stock_df['Close'].shift(1) - stock_df['52High']) / stock_df['52High'], 3)
 
     H, L, C, V = stock_df['High'], stock_df['Low'], stock_df['Close'], stock_df['Volume']
     #해당 종목 EMA
@@ -309,13 +293,13 @@ def scrap_stock_data(code,marcap, end_info_day, day_120):
 
     #주식시장 개장일만 분류
     filtered_df = filter_df(result_df, end_info_day, day_120)
-
+    
     return filtered_df
 
 def scrap_sub_data(end_info_day, day_120):
     warnings.simplefilter(action='ignore', category=FutureWarning) # FutureWarning 제거
     # 코스피 지수 
-    kospi = pd.read_csv('/Users/moon/Desktop/Moon SeungHoo/Stock_Machine_Learning/KRX/kospi/240215.csv', low_memory=False, encoding='euc-kr')
+    kospi = pd.read_csv('/Users/moon/Desktop/Moon SeungHoo/Stock_Machine_Learning/KRX/kospi/240215.csv', encoding='euc-kr')
     kospi = kospi.drop(['대비','등락률','시가','고가','저가','거래대금','상장시가총액'],axis=1)
 
     rows = kospi[kospi['지수명'] == '코스피'].rename(columns={'지수명': 'Date'})
