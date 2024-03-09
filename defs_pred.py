@@ -15,18 +15,22 @@ from functools import reduce
 
 #날자 변수 생성
 def date_info():
-    targer_day = datetime(year=2024,month=2,day=16)
+    targer_day = datetime(year=2024,month=3,day=11)
 
     if targer_day.strftime('%a') == 'Mon':
         end_info_day = (targer_day - timedelta(days=3))
-        delta = timedelta(days=375)
+        delta = timedelta(days=375) 
+        delta2 = timedelta(days=60)
+        day_21 = (end_info_day - delta2).strftime("%Y-%m-%d")
         day_120 = (end_info_day - delta).strftime("%Y-%m-%d")
     else :
         end_info_day = (targer_day - timedelta(days=1))
         delta = timedelta(days=375)
+        delta2 = timedelta(days=60)
+        day_21 = (end_info_day - delta2).strftime("%Y-%m-%d")
         day_120 = (end_info_day - delta).strftime("%Y-%m-%d")
 
-    return targer_day, end_info_day, day_120
+    return targer_day, end_info_day, day_120, day_21
 
 def add_52_week_high_info(series, end_info_day):
     df = pd.DataFrame(series, columns=['Code'])
@@ -40,6 +44,7 @@ def add_52_week_high_info(series, end_info_day):
 
         # FinanceDataReader를 사용하여 주식 데이터 가져오기
         stock_data = fdr.DataReader(stock_code, start=high_52_date, end=end_info_day).reset_index()
+        stock_data['Volume'] = stock_data['Volume'] * ((stock_data['High'] + stock_data['Low']) / 2)
 
         # 52주 최고가 계산
         rolling_result = stock_data['High'].rolling(window=250).max()
@@ -47,8 +52,8 @@ def add_52_week_high_info(series, end_info_day):
         # 최근 종가 대비 52주 최고가 대비 변동율 계산
         change_percentage = round((stock_data['Close'].shift(1) - rolling_result) / rolling_result, 3)
 
-        # 거래량(거래대금)의 평균 계산
-        stock_data = stock_data.tail(3)
+        # 거래대금 평균 계산
+        stock_data = stock_data.tail(5)
         average_volume = int(stock_data['Volume'].mean())
         
         high_52_week_list.append(rolling_result.tail(1))
@@ -57,14 +62,14 @@ def add_52_week_high_info(series, end_info_day):
 
     df['52주 최고가'] = high_52_week_list
     df['52주 최고가 대비 변동율'] = change_percentage_list
-    df['3일 평균 거래량'] = average_volume_5_days
+    df['5일 평균 거래대금'] = average_volume_5_days
 
     return df
 
 #종목코드 생성
 def ticker_list(end_info_day):
-    a = stock.get_market_ticker_list("20240215", market="KOSPI")
-    b = stock.get_market_ticker_list("20240215", market="KOSDAQ")
+    a = stock.get_market_ticker_list("20240308", market="KOSPI")
+    b = stock.get_market_ticker_list("20240308", market="KOSDAQ")
     kospi = pd.Series(a)
     kosdaq = pd.Series(b)
     code = pd.concat([kospi,kosdaq],axis=0)
@@ -72,21 +77,21 @@ def ticker_list(end_info_day):
     # 데이터프레임 생성 
     result_df = add_52_week_high_info(code, end_info_day)
 
-    result_df = result_df[result_df['3일 평균 거래량'] >= 5000000]
+    result_df = result_df[result_df['5일 평균 거래대금'] >= 45000000000]
     result_df['52주 최고가 대비 변동율'] = result_df['52주 최고가 대비 변동율'].apply(lambda x: float(x))
 
     # 변동율을 기준으로 내림차순 정렬
-    sorted_df = result_df.sort_values(by='52주 최고가 대비 변동율', ascending=False)
+    sorted_df = result_df.sort_values(by='52주 최고가 대비 변동율', ascending=True)
 
     # 상위 100개만 선택하여 새로운 데이터프레임 생성
     top_100_df = sorted_df.head(100)
-    top_100_df = top_100_df.drop(['52주 최고가','52주 최고가 대비 변동율','3일 평균 거래량'],axis=1)
+    top_100_df = top_100_df.drop(['52주 최고가','52주 최고가 대비 변동율','5일 평균 거래대금'],axis=1)
     top_100_list = top_100_df['Code'].tolist()
 
     return top_100_list
 
 def Marcap():
-    marcap = pd.read_csv('/Users/moon/Desktop/Moon SeungHoo/Stock_Machine_Learning/KRX/marcap/240215.csv', encoding='euc-kr')
+    marcap = pd.read_csv('/Users/moon/Desktop/Moon SeungHoo/Stock_Machine_Learning/KRX/marcap/240308.csv', encoding='euc-kr')
     # 거래량과 종가가 조건을 충족하지 못하는 종목 필터링
     marcap = marcap[(marcap['종가'] > 5000)]
     marcap = marcap.drop(['종목명','시장구분','소속부','종가','대비','등락률','시가','고가','저가','거래량'],axis=1)
@@ -163,7 +168,7 @@ def FED_RATE(end_info_day, day_120) -> pd.DataFrame:
  
 def Data_Scrap_Pred():
     #날자 변수 생성
-    targer_day, end_info_day, day_120 = date_info()
+    targer_day, end_info_day, day_120, day_21 = date_info()
     #종목코드 생성
     code_list = ticker_list(end_info_day) 
     # code_list = ['222080'] 
@@ -172,7 +177,7 @@ def Data_Scrap_Pred():
     #marcap 
     marcap = Marcap()
     #보조지표 생성
-    s_list = scrap_sub_data(end_info_day, day_120)
+    s_list = scrap_sub_data(end_info_day, day_120, day_21)
     #merging_stock_data에 입력할 2개 인자 
     input_data = [(code_list,marcap, s_list, end_info_day, day_120) for code_list in code_list]
     ## 멀티 프로세싱 ###
@@ -184,7 +189,7 @@ def Data_Scrap_Pred():
     column_names.insert(0,'Ticker')
     s_df = pd.DataFrame(stock_data, columns=column_names)
     #timestamp 형식 int로 변환
-    s_df['Date'] = s_df['Date'].dt.year * 10000 + s_df['Date'].dt.month * 100 + s_df['Date'].dt.day
+    # s_df['Date'] = s_df['Date'].dt.year * 10000 + s_df['Date'].dt.month * 100 + s_df['Date'].dt.day
     s_df = s_df[~s_df['Ticker'].str.contains('K|L|M')]
     
     return s_df
@@ -293,20 +298,52 @@ def scrap_stock_data(code,marcap, end_info_day, day_120):
 
     #주식시장 개장일만 분류
     filtered_df = filter_df(result_df, end_info_day, day_120)
-    
+
     return filtered_df
 
-def scrap_sub_data(end_info_day, day_120):
+def scrap_sub_data(end_info_day, day_120, day_21):
     warnings.simplefilter(action='ignore', category=FutureWarning) # FutureWarning 제거
+
+    KSI_df = fdr.DataReader('KS11',day_21,end_info_day).reset_index().drop(['Adj Close'], axis=1).round(2)
+
     # 코스피 지수 
-    kospi = pd.read_csv('/Users/moon/Desktop/Moon SeungHoo/Stock_Machine_Learning/KRX/kospi/240215.csv', encoding='euc-kr')
-    kospi = kospi.drop(['대비','등락률','시가','고가','저가','거래대금','상장시가총액'],axis=1)
-
+    kospi = pd.read_csv('/Users/moon/Desktop/Moon SeungHoo/Stock_Machine_Learning/KRX/kospi/240308.csv', 
+                        encoding='euc-kr').drop(['대비','등락률','거래대금','상장시가총액'],axis=1).rename(
+                        columns={'시가':'Open','고가':'High','저가':'Low','종가':'Close','거래량':'Volume'})
     rows = kospi[kospi['지수명'] == '코스피'].rename(columns={'지수명': 'Date'})
-    rows['거래량'] = rows['거래량'].astype(int)
-    rows = rows.replace({'Date' : '코스피'}, pd.to_datetime('2024-02-15'))
+    rows['Volume'] = rows['Volume'].astype(int)
+    rows = rows.replace({'Date' : '코스피'}, pd.to_datetime('2024-03-08'))
 
-    filtered_df = filter_df(rows, end_info_day, day_120)
+    new_order = ['Date', 'Open', 'High','Low','Close','Volume']  # 새로운 열 순서 지정
+    rows = rows[new_order]
+
+    df = pd.concat([KSI_df,rows])
+
+    H, L, C, V = df['High'], df['Low'], df['Close'], df['Volume']
+
+    #해당 종목 RSI
+    df['RSI'] = ta.momentum.rsi(close=C, window=14, fillna=True).round(2)
+
+    #해당 종목 MACD
+    df['MACD_L'] = ta.trend.MACD(close=C,window_fast=12,window_slow=26,window_sign=9,fillna=False).macd().round(2)
+    time.sleep(0.05)
+    df['MACD_S'] = ta.trend.MACD(close=C,window_fast=12,window_slow=26,window_sign=9,fillna=False).macd_signal().round(2)
+
+    #해당 종목 Bolinger Bend
+    df['BB'] = ta.volatility.bollinger_hband(close=C,window=7,window_dev=2,fillna=True).round(2)
+
+    #해당 종목 SR
+    df['SR'] = ta.momentum.StochasticOscillator(close=C,high=H,low=L,window=14,smooth_window=3,fillna=False).stoch().round(2)
+    time.sleep(0.05)
+    df['SR_S'] = ta.momentum.StochasticOscillator(close=C,high=H,low=L,window=14,smooth_window=3,fillna=False).stoch_signal().round(2)
+
+    #해당종목 WR
+    df['WR'] = ta.momentum.WilliamsRIndicator(high=H,low=L,close=C,lbp=14,fillna=False).williams_r().round(2)
+    
+    df = df.drop(['High','Low','Open'],axis=1)
+
+    filtered_df = filter_df(df, end_info_day, day_120)
+
     return filtered_df
 
 if __name__ == '__main__':

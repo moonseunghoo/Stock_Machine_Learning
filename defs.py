@@ -148,7 +148,7 @@ def merging_stock_data(code, s_list):
 def m_df_to_d_df(m_df):
 
     start_date = '2020-01-01'
-    end_date = '2024-02-16'
+    end_date = '2024-03-04'
     date_range = pd.date_range(start_date,end_date,freq='D')
     ch_df = m_df.reindex(date_range).fillna(method='ffill')
 
@@ -160,7 +160,7 @@ def filter_df(df):
     # 한국 주식시장(KRX)의 개장일 캘린더 생성
     krx = mcal.get_calendar('XKRX')
     # 개장일 가져오기
-    schedule = krx.schedule('2020-01-01','2024-02-16')
+    schedule = krx.schedule('2020-01-01','2024-03-04')
     # break_start,break_end 제거
     krx.remove_time(market_time='break_start')
     krx.remove_time(market_time='break_end')
@@ -174,7 +174,7 @@ def filter_df(df):
 def scrap_stock_data(code):
     warnings.simplefilter(action='ignore', category=FutureWarning) # FutureWarning 제거
         
-    stock_df = fdr.DataReader(code,'2019-01-01','2024-02-16').reset_index()
+    stock_df = fdr.DataReader(code,'2019-01-01','2024-03-04').reset_index()
     # 이동평균선 5,20,60,200
     ma = [5,20,60,120]
     for days in ma:
@@ -233,7 +233,7 @@ def scrap_stock_data(code):
     stock_df['Label'] = label_df['고가변동'] >= 3.3
 
     #해당 종목 시가총액, 거래대금, 주식수
-    M_df = marcap_data('2020-01-01','2024-02-16',code=code)
+    M_df = marcap_data('2020-01-01','2024-03-04',code=code)
     selected_colums = ['Marcap','Amount','Stocks']
     M_df = M_df[selected_colums].reset_index()
 
@@ -250,10 +250,32 @@ def scrap_sub_data():
     warnings.simplefilter(action='ignore', category=FutureWarning) # FutureWarning 제거
 
     # 코스피 지수 
-    KSI_df = fdr.DataReader('KS11','2020-01-01','2024-02-16').reset_index().drop(
-        ['Open','High','Low','Adj Close'], axis=1).rename(
-            columns={'Close':'KSI_Clo','Volume':'KSI_Vol'}).round(2)
+    KSI_df = fdr.DataReader('KS11','2020-01-01','2024-03-04').reset_index().drop(
+        ['Adj Close'], axis=1)
     
+    H, L, C, V = KSI_df['High'], KSI_df['Low'], KSI_df['Close'], KSI_df['Volume']
+    
+    #해당 종목 RSI
+    KSI_df['RSI'] = ta.momentum.rsi(close=C, window=14, fillna=True).round(2)
+
+    #해당 종목 MACD
+    KSI_df['MACD_L'] = ta.trend.MACD(close=C,window_fast=12,window_slow=26,window_sign=9,fillna=False).macd().round(2)
+    time.sleep(0.05)
+    KSI_df['MACD_S'] = ta.trend.MACD(close=C,window_fast=12,window_slow=26,window_sign=9,fillna=False).macd_signal().round(2)
+
+    #해당 종목 Bolinger Bend
+    KSI_df['BB'] = ta.volatility.bollinger_hband(close=C,window=7,window_dev=2,fillna=True).round(2)
+
+    #해당 종목 SR
+    KSI_df['SR'] = ta.momentum.StochasticOscillator(close=C,high=H,low=L,window=14,smooth_window=3,fillna=False).stoch().round(2)
+    time.sleep(0.05)
+    KSI_df['SR_S'] = ta.momentum.StochasticOscillator(close=C,high=H,low=L,window=14,smooth_window=3,fillna=False).stoch_signal().round(2)
+
+    #해당종목 WR
+    KSI_df['WR'] = ta.momentum.WilliamsRIndicator(high=H,low=L,close=C,lbp=14,fillna=False).williams_r().round(2)
+
+    KSI_df = KSI_df.drop(['High','Low','Open'],axis=1)
+
     # 주식시장 개장일만 분류
     filtered_df = filter_df(KSI_df)
     return filtered_df
