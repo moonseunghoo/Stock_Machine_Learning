@@ -1,5 +1,7 @@
-import smtplib, ssl
 import datetime
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 def send_email(subject, body):
     smtp_server = "smtp.gmail.com"
@@ -7,24 +9,20 @@ def send_email(subject, body):
 
     sender_email = "hoo217606@gmail.com"
     receiver_email = "tmdgn2002@gmail.com"
-    password = "tlsrh112!"
+    app_password = "yoch spra idlc stki"  # 애플리케이션 비밀번호 사용
 
-    message = f"Subject: {subject}\n\n{body}"
+    message = MIMEMultipart()
+    message["From"] = sender_email
+    message["To"] = receiver_email
+    message["Subject"] = subject  # 수정된 부분
 
-    context = ssl.create_default_context()
+    message.attach(MIMEText(body, "plain"))
 
-    with smtplib.SMTP(smtp_server, port) as server:
-        server.starttls(context=context)
-        server.login(sender_email, password)
-        server.sendmail(sender_email, receiver_email, message)
-
-
-# 현재 시간 가져오기
-now = datetime.datetime.now()
-
-# 이메일로 보낼 내용 설정
-subject = "일일 보고"
-body = f"현재 시간: {now}"
+    server = smtplib.SMTP(smtp_server, port)
+    server.starttls()
+    server.login(sender_email, app_password)
+    server.sendmail(sender_email, receiver_email, message.as_string())
+    server.quit()
 
 # 이메일 보내기
-send_email(subject, body)
+send_email("테스트 제목", "테스트 본문")
