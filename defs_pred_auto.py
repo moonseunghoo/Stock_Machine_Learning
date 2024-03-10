@@ -6,7 +6,7 @@ import pandas_market_calendars as mcal
 import warnings
 import time
 import ta
-#test
+
 from pykrx import stock
 from PublicDataReader import Fred
 from datetime import datetime, timedelta
