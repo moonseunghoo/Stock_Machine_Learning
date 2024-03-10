@@ -220,3 +220,4 @@ if __name__ == '__main__':
   print(pred)
   # 이메일 보내기
   send_email(targer_day + ' 3%이상 상승 예측 종목', pred)
+  
