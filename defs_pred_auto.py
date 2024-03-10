@@ -1,3 +1,18 @@
+import FinanceDataReader as fdr
+import multiprocessing
+import pandas as pd
+import numpy as np
+import pandas_market_calendars as mcal
+import warnings
+import time
+import ta
+
+from marcap import marcap_data
+from pykrx import stock
+from PublicDataReader import Fred
+from datetime import datetime, timedelta
+from functools import reduce
+
 #날자 변수 생성
 def date_info():
     # today = datetime.now()
@@ -347,21 +362,6 @@ def scrap_sub_data(end_info_day, day_120, day_21):
     return filtered_df
 
 if __name__ == '__main__':
-    import FinanceDataReader as fdr
-    import multiprocessing
-    import pandas as pd
-    import numpy as np
-    import pandas_market_calendars as mcal
-    import warnings
-    import time
-    import ta
-
-    from marcap import marcap_data
-    from pykrx import stock
-    from PublicDataReader import Fred
-    from datetime import datetime, timedelta
-    from functools import reduce
-    
     date_info()
     add_52_week_high_info()
     ticker_list()
