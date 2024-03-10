@@ -1,18 +1,3 @@
-import smtplib
-import pandas as pd
-import cloudscraper
-import time
-import FinanceDataReader as fdr
-import tensorflow as tf
-tf.config.experimental.set_visible_devices([], 'GPU')
-
-from collections import OrderedDict
-from datetime import datetime, timedelta
-from defs_pred_auto import Data_Scrap_Pred
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from io import BytesIO
-
 #e-mail 함수
 def send_email(subject, body):
     smtp_server = "smtp.gmail.com"
@@ -200,6 +185,21 @@ def add_52_week_high_info(series,end_info_day):
   return df
 
 if __name__ == '__main__':
+  import smtplib
+  import pandas as pd
+  import cloudscraper
+  import time
+  import FinanceDataReader as fdr
+  import tensorflow as tf
+  tf.config.experimental.set_visible_devices([], 'GPU')
+
+  from collections import OrderedDict
+  from datetime import datetime, timedelta
+  from defs_pred_auto import Data_Scrap_Pred
+  from email.mime.text import MIMEText
+  from email.mime.multipart import MIMEMultipart
+  from io import BytesIO
+
   # today = datetime.now()
   today = (datetime.now() - timedelta(days=2))
 
