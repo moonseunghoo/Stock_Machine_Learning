@@ -314,6 +314,7 @@ def scrap_sub_data(end_info_day, day_120, day_21):
     warnings.simplefilter(action='ignore', category=FutureWarning) # FutureWarning 제거
 
     KSI_df = fdr.DataReader('KS11', day_21, end_info_day).reset_index().drop(['Adj Close'], axis=1).round(2)
+    print(KSI_df.columns)
     #asd
 
     date = end_info_day.strftime("%Y-%m-%d").replace("-", "")[2:]
