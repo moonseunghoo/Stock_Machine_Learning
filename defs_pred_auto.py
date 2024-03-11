@@ -331,7 +331,7 @@ def scrap_sub_data(end_info_day, day_120, day_21):
     new_order = ['Date', 'Open', 'High','Low','Close','Volume']  # 새로운 열 순서 지정
     rows = rows[new_order]
 
-    df = pd.concat([KSI_df,rows]).drop(labels='Adj Close', axis=1)
+    df = pd.concat([KSI_df,rows])
 
     H, L, C, V = df['High'], df['Low'], df['Close'], df['Volume']
 
