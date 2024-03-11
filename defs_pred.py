@@ -7,7 +7,6 @@ import warnings
 import time
 import ta
 
-from marcap import marcap_data
 from pykrx import stock
 from PublicDataReader import Fred
 from datetime import datetime, timedelta
