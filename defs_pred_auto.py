@@ -313,7 +313,7 @@ def scrap_stock_data(code,marcap, end_info_day, day_120):
 def scrap_sub_data(end_info_day, day_120, day_21):
     warnings.simplefilter(action='ignore', category=FutureWarning) # FutureWarning 제거
 
-    KSI_df = fdr.DataReader('KS11',day_21,end_info_day).reset_index().drop(labels='Adj Close', axis=1).round(2)
+    KSI_df = fdr.DataReader('KS11',day_21,end_info_day).reset_index().round(2)
 
     date = end_info_day.strftime("%Y-%m-%d").replace("-", "")[2:]
     s_date = end_info_day.strftime("%Y-%m-%d")
@@ -329,7 +329,7 @@ def scrap_sub_data(end_info_day, day_120, day_21):
     new_order = ['Date', 'Open', 'High','Low','Close','Volume']  # 새로운 열 순서 지정
     rows = rows[new_order]
 
-    df = pd.concat([KSI_df,rows])
+    df = pd.concat([KSI_df,rows]).drop(labels='Adj Close', axis=1)
 
     H, L, C, V = df['High'], df['Low'], df['Close'], df['Volume']
 
