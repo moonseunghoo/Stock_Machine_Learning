@@ -148,7 +148,7 @@ def Prediction():
   pred_ticker = list(OrderedDict.fromkeys(filter_pred['Ticker'])) #종목코드 저장
 
   # 불필요한 데이터 삭제
-  filter_pred = filter_pred.drop(['Ticker','Date','Change_x'],axis=1) #종목코드, 날자, 상승율 삭제
+  filter_pred = filter_pred.drop(['Ticker','Date','Change'],axis=1) #종목코드, 날자, 상승율 삭제
 
   model = tf.keras.models.load_model("GRU_128_64_32_2_KOSPI_TI_3%.h5")
   
@@ -218,5 +218,5 @@ if __name__ == '__main__':
   pred = Prediction().to_string(index=False)
   print(pred)
   # 이메일 보내기
-  send_email(targer_day + ' 3%이상 상승 예측 종목', pred)
+  # send_email(targer_day + ' 3%이상 상승 예측 종목', pred)
   
