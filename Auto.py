@@ -4,6 +4,7 @@ import cloudscraper
 import time
 import FinanceDataReader as fdr
 import tensorflow as tf
+tf.keras.backend.clear_session()
 
 from collections import OrderedDict
 from datetime import datetime, timedelta
