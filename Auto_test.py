@@ -70,7 +70,7 @@ def KRX_data_form():
   kospi_form_data = {
     'locale': 'ko_KR',
     'idxIndMidclssCd': '02',
-    'trdDd': '20240308',
+    'trdDd': '',
     "share": '2',
     'money': '3',
     "csvxls_isNo": 'false',
@@ -82,7 +82,7 @@ def KRX_data_form():
   marcap_form_data = {
     'locale': 'ko_KR',
     'mktId': 'ALL',
-    'trdDd': '20240308',
+    'trdDd': '',
     'share': '1',
     'money': '1',
     'csvxls_isNo': 'false',
@@ -125,8 +125,8 @@ def filter_df(df): #데이터프레임 필터링
   return filtered
 
 def Prediction():
-  # today = datetime.now()
-  today = (datetime.now() - timedelta(days=3))
+  today = datetime.now()
+  # today = (datetime.now() - timedelta(days=3))
   if today.strftime('%a') == 'Fri':
       target_day = (today + timedelta(days=3))
   else :
@@ -199,8 +199,8 @@ def add_52_week_high_info(series,end_info_day):
   return df
 
 if __name__ == '__main__':
-  # today = datetime.now()
-  today = (datetime.now() - timedelta(days=3))
+  today = datetime.now()
+  # today = (datetime.now() - timedelta(days=3))
 
   if today.strftime('%a') == 'Fri':
       targer_day = (today + timedelta(days=3)).strftime('%Y%m%d')[2:]
@@ -208,12 +208,12 @@ if __name__ == '__main__':
       targer_day = (today + timedelta(days=1)).strftime('%Y%m%d')[2:]
   print('예측에 필요한 파일 저장 날짜 : ', targer_day)
 
-  # kospi_form_data, marcap_form_data = KRX_data_form()
-  # KRX_Crolling(kospi_form_data)
-  # KRX_Crolling(marcap_form_data)
+  kospi_form_data, marcap_form_data = KRX_data_form()
+  KRX_Crolling(kospi_form_data)
+  KRX_Crolling(marcap_form_data)
   
-  # s_df = Data_Scrap_Pred()
-  # s_df.to_csv('KRX/Scrap_Pred/StockData_Pred_'+ targer_day +'.csv',index=False)
+  s_df = Data_Scrap_Pred()
+  s_df.to_csv('KRX/Scrap_Pred/StockData_Pred_'+ targer_day +'.csv',index=False)
 
   pred = Prediction().to_string(index=False)
   print(pred)

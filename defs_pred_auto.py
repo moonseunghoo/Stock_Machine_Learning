@@ -13,8 +13,8 @@ from datetime import datetime, timedelta
 
 #날자 변수 생성
 def date_info():
-    # today = datetime.now()
-    today = (datetime.now() - timedelta(days=3))
+    today = datetime.now()
+    # today = (datetime.now() - timedelta(days=3))
 
     if today.strftime('%a') == 'Fri':
         targer_day = (today + timedelta(days=3))
@@ -99,8 +99,8 @@ def ticker_list(end_info_day):
     return top_100_list
 
 def Marcap():
-    date = (datetime.now() - timedelta(days=3)).strftime('%Y%m%d')[2:]
-    # date = datetime.now().strftime('%Y%m%d')[2:]
+    # date = (datetime.now() - timedelta(days=3)).strftime('%Y%m%d')[2:]
+    date = datetime.now().strftime('%Y%m%d')[2:]
     marcap = pd.read_csv('KRX/marcap/' + date + '.csv', encoding='euc-kr')
     # 거래량과 종가가 조건을 충족하지 못하는 종목 필터링
     marcap = marcap[(marcap['종가'] > 5000)]
@@ -221,7 +221,6 @@ def merging_stock_data(code,marcap, s_list, end_info_day, day_120):
     return merge_stock_list, column_names
 
 def m_df_to_d_df(m_df, end_info_day, day_120):
-
     start_date = day_120
     end_date = end_info_day
     date_range = pd.date_range(start_date,end_date,freq='D')
