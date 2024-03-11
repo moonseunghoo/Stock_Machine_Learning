@@ -143,10 +143,10 @@ def Prediction():
   pred_df = pd.read_csv('KRX/Scrap_Pred/StockData_Pred_'+ date +'.csv',low_memory=False)
 
   filter_pred= filter_df(pred_df)
+  print(filter_pred.tail(1))
 
   # 예측에 필요한 데이터 
   pred_ticker = list(OrderedDict.fromkeys(filter_pred['Ticker'])) #종목코드 저장
-  print(filter_pred.tail(1))
 
   # 불필요한 데이터 삭제
   filter_pred = filter_pred.drop(['Ticker','Date','Close_x'],axis=1) #종목코드, 날자, 상승율 삭제
