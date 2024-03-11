@@ -4,6 +4,7 @@ import cloudscraper
 import time
 import FinanceDataReader as fdr
 import tensorflow as tf
+
 #tf.config.experimental.set_visible_devices([], 'GPU')
 
 from collections import OrderedDict
@@ -151,7 +152,7 @@ def Prediction():
   # 불필요한 데이터 삭제
   filter_pred = filter_pred.drop({'Ticker','Date','Change'},axis=1) #종목코드, 날자, 상승율 삭제
 
-  model = tf.keras.models.load_model("RaspberryPi_test.h5")
+  model = �tf.keras.models.load_model("RaspberryPi_test.h5")
   
   # GRU_128_64_32_2_KOSPI_TI_3%.h5
   Pred = model.predict(filter_pred).round(2)
