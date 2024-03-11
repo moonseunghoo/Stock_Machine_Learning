@@ -4,7 +4,7 @@ import cloudscraper
 import time
 import FinanceDataReader as fdr
 import tensorflow as tf
-tf.config.experimental.set_visible_devices([], 'GPU')
+#tf.config.experimental.set_visible_devices([], 'GPU')
 
 from collections import OrderedDict
 from datetime import datetime, timedelta
