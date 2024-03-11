@@ -149,7 +149,7 @@ def Prediction():
   print(filter_pred.tail(1))
 
   # 불필요한 데이터 삭제
-  filter_pred = filter_pred.drop(['Ticker','Date','Change'],axis=1) #종목코드, 날자, 상승율 삭제
+  filter_pred = filter_pred.drop(['Ticker','Date','Close_x'],axis=1) #종목코드, 날자, 상승율 삭제
 
   model = tf.keras.models.load_model("GRU_128_64_32_2_KOSPI_TI_3%.h5")
   
