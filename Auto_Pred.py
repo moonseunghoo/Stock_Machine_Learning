@@ -214,27 +214,28 @@ def git_push(commit_message):
       print("An error occurred:", e)
 
 if __name__ == '__main__':
-  today = datetime.now()
-  # today = (datetime.now() - timedelta(days=3))
+  # today = datetime.now()
+  # # today = (datetime.now() - timedelta(days=3))
 
-  if today.strftime('%a') == 'Fri':
-      targer_day = (today + timedelta(days=3)).strftime('%Y%m%d')[2:]
-  else :
-      targer_day = (today + timedelta(days=1)).strftime('%Y%m%d')[2:]
-  print('예측에 필요한 파일 저장 날짜 : ', targer_day)
+  # if today.strftime('%a') == 'Fri':
+  #     targer_day = (today + timedelta(days=3)).strftime('%Y%m%d')[2:]
+  # else :
+  #     targer_day = (today + timedelta(days=1)).strftime('%Y%m%d')[2:]
+  # print('예측에 필요한 파일 저장 날짜 : ', targer_day)
 
-  kospi_form_data, marcap_form_data = KRX_data_form()
-  KRX_Crolling(kospi_form_data)
-  KRX_Crolling(marcap_form_data)
+  # kospi_form_data, marcap_form_data = KRX_data_form()
+  # KRX_Crolling(kospi_form_data)
+  # KRX_Crolling(marcap_form_data)
   
-  s_df = Data_Scrap_Pred()
-  s_df.to_csv('KRX/Scrap_Pred/StockData_Pred_'+ targer_day +'.csv',index=False)
+  # s_df = Data_Scrap_Pred()
+  # s_df.to_csv('KRX/Scrap_Pred/StockData_Pred_'+ targer_day +'.csv',index=False)
 
-  pred = Prediction().to_string(index=False)
-  print(pred)
+  # pred = Prediction().to_string(index=False)
+  # print(pred)
   
   # 이메일 보내기
-  send_email(targer_day + ' 3%이상 상승 예측 종목', pred)
+  # send_email(targer_day + ' 3%이상 상승 예측 종목', pred)
+  send_email("test","test")
   # 호출 예시
-  git_push(targer_day)
+  # git_push(targer_day)
   
