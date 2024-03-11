@@ -316,7 +316,6 @@ def scrap_sub_data(end_info_day, day_120, day_21):
     KSI_df = fdr.DataReader('KS11', day_21, end_info_day).reset_index().round(2)
     # .drop(['Adj Close'], axis=1)
     print(KSI_df.columns)
-    print(KSI_df.columns)
     #asd
 
     date = end_info_day.strftime("%Y-%m-%d").replace("-", "")[2:]
