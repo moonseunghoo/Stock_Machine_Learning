@@ -209,12 +209,12 @@ if __name__ == '__main__':
       targer_day = (today + timedelta(days=1)).strftime('%Y%m%d')[2:]
   print('예측에 필요한 파일 저장 날짜 : ', targer_day)
 
-  # kospi_form_data, marcap_form_data = KRX_data_form()
-  # KRX_Crolling(kospi_form_data)
-  # KRX_Crolling(marcap_form_data)
+  kospi_form_data, marcap_form_data = KRX_data_form()
+  KRX_Crolling(kospi_form_data)
+  KRX_Crolling(marcap_form_data)
   
-  # s_df = Data_Scrap_Pred()
-  # s_df.to_csv('KRX/Scrap_Pred/StockData_Pred_'+ targer_day +'.csv',index=False)
+  s_df = Data_Scrap_Pred()
+  s_df.to_csv('KRX/Scrap_Pred/StockData_Pred_'+ targer_day +'.csv',index=False)
 
   pred = Prediction().to_string(index=False)
   print(pred)
