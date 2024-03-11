@@ -146,8 +146,10 @@ def Prediction():
   # 예측에 필요한 데이터 
   pred_ticker = list(OrderedDict.fromkeys(filter_pred['Ticker'])) #종목코드 저장
 
+  print(filter_pred.columns)
+
   # 불필요한 데이터 삭제
-  filter_pred = filter_pred.drop(['Ticker','Date','Change_x'],axis=1) #종목코드, 날자, 상승율 삭제
+  filter_pred = filter_pred.drop(['Ticker','Date','Change'],axis=1) #종목코드, 날자, 상승율 삭제
   
   print(filter_pred.columns)
 
