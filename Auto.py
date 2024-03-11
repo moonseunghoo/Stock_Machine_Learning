@@ -4,8 +4,9 @@ import cloudscraper
 import time
 import FinanceDataReader as fdr
 import tensorflow as tf
-tf.keras.backend.clear_session()
+tf.config.experimental.set_visible_devices([], 'GPU')
 
+from tensorflow.keras.models import load_model
 from collections import OrderedDict
 from datetime import datetime, timedelta
 from defs_pred_auto import Data_Scrap_Pred
@@ -151,7 +152,7 @@ def Prediction():
   # 불필요한 데이터 삭제
   filter_pred = filter_pred.drop({'Ticker','Date','Change'},axis=1) #종목코드, 날자, 상승율 삭제
 
-  model_1 = tf.keras.models.load_model("GRU_128_64_32_2_KOSPI_TI_3%.h5")
+  model_1 = load_model("GRU_128_64_32_2_KOSPI_TI_3%.h5")
 
   Pred = model_1.predict(filter_pred).round(2)
   # 5% 이상 오를 종목 식별
