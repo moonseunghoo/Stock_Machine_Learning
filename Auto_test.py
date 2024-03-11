@@ -4,6 +4,7 @@ import cloudscraper
 import time
 import FinanceDataReader as fdr
 import tensorflow as tf
+import subprocess
 
 from collections import OrderedDict
 from datetime import datetime, timedelta
@@ -201,6 +202,21 @@ def add_52_week_high_info(series,end_info_day):
 
   return df
 
+def git_push(commit_message):
+  try:
+      # Add all files to staging area
+      subprocess.run(["git", "add", "."])
+
+      # Commit changes
+      subprocess.run(["git", "commit", "-m", commit_message])
+
+      # Push changes to remote repository (origin)
+      subprocess.run(["git", "push"])
+      
+      print("Pushed to GitHub successfully.")
+  except Exception as e:
+      print("An error occurred:", e)
+
 if __name__ == '__main__':
   today = datetime.now()
   # today = (datetime.now() - timedelta(days=3))
@@ -223,4 +239,6 @@ if __name__ == '__main__':
   
   # 이메일 보내기
   send_email(targer_day + ' 3%이상 상승 예측 종목', pred)
+  # 호출 예시
+  git_push(targer_day)
   
