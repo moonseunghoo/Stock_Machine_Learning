@@ -6,6 +6,8 @@ import FinanceDataReader as fdr
 import tensorflow as tf
 tf.config.experimental.set_visible_devices([], 'GPU')
 
+#test
+
 from collections import OrderedDict
 from datetime import datetime, timedelta
 from defs_pred_auto import Data_Scrap_Pred
