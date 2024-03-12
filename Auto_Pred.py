@@ -5,6 +5,7 @@ import time
 import FinanceDataReader as fdr
 import tensorflow as tf
 import subprocess
+import os
 
 from collections import OrderedDict
 from datetime import datetime, timedelta
@@ -214,6 +215,7 @@ def git_push(commit_message):
       print("An error occurred:", e)
 
 if __name__ == '__main__':
+  os.chdir('/home/moon/Stock_Machine_Learning')
   today = datetime.now()
   # today = (datetime.now() - timedelta(days=3))
 
