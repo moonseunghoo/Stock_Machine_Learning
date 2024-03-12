@@ -14,7 +14,7 @@ from functools import reduce
 
 #날자 변수 생성
 def date_info():
-    targer_day = datetime(year=2024,month=3,day=11)
+    targer_day = datetime(year=2024,month=3,day=13)
 
     if targer_day.strftime('%a') == 'Mon':
         end_info_day = (targer_day - timedelta(days=3))
@@ -67,8 +67,8 @@ def add_52_week_high_info(series, end_info_day):
 
 #종목코드 생성
 def ticker_list(end_info_day):
-    a = stock.get_market_ticker_list("20240308", market="KOSPI")
-    b = stock.get_market_ticker_list("20240308", market="KOSDAQ")
+    a = stock.get_market_ticker_list("20240312", market="KOSPI")
+    b = stock.get_market_ticker_list("20240312", market="KOSDAQ")
     kospi = pd.Series(a)
     kosdaq = pd.Series(b)
     code = pd.concat([kospi,kosdaq],axis=0)
@@ -76,7 +76,7 @@ def ticker_list(end_info_day):
     # 데이터프레임 생성 
     result_df = add_52_week_high_info(code, end_info_day)
 
-    result_df = result_df[result_df['5일 평균 거래대금'] >= 45000000000]
+    result_df = result_df[result_df['5일 평균 거래대금'] >= 30000000000]
     result_df['52주 최고가 대비 변동율'] = result_df['52주 최고가 대비 변동율'].apply(lambda x: float(x))
 
     # 변동율을 기준으로 내림차순 정렬
@@ -90,7 +90,7 @@ def ticker_list(end_info_day):
     return top_100_list
 
 def Marcap():
-    marcap = pd.read_csv('/Users/moon/Desktop/Moon SeungHoo/Stock_Machine_Learning/KRX/marcap/240308.csv', encoding='euc-kr')
+    marcap = pd.read_csv('KRX/marcap/240312.csv', encoding='euc-kr')
     # 거래량과 종가가 조건을 충족하지 못하는 종목 필터링
     marcap = marcap[(marcap['종가'] > 5000)]
     marcap = marcap.drop(['종목명','시장구분','소속부','종가','대비','등락률','시가','고가','저가','거래량'],axis=1)
@@ -306,12 +306,12 @@ def scrap_sub_data(end_info_day, day_120, day_21):
     KSI_df = fdr.DataReader('KS11',day_21,end_info_day).reset_index().drop(['Adj Close'], axis=1).round(2)
 
     # 코스피 지수 
-    kospi = pd.read_csv('/Users/moon/Desktop/Moon SeungHoo/Stock_Machine_Learning/KRX/kospi/240308.csv', 
+    kospi = pd.read_csv('KRX/kospi/240312.csv', 
                         encoding='euc-kr').drop(['대비','등락률','거래대금','상장시가총액'],axis=1).rename(
                         columns={'시가':'Open','고가':'High','저가':'Low','종가':'Close','거래량':'Volume'})
     rows = kospi[kospi['지수명'] == '코스피'].rename(columns={'지수명': 'Date'})
     rows['Volume'] = rows['Volume'].astype(int)
-    rows = rows.replace({'Date' : '코스피'}, pd.to_datetime('2024-03-08'))
+    rows = rows.replace({'Date' : '코스피'}, pd.to_datetime('2024-03-12'))
 
     new_order = ['Date', 'Open', 'High','Low','Close','Volume']  # 새로운 열 순서 지정
     rows = rows[new_order]
