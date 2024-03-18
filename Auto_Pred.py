@@ -16,25 +16,26 @@ from io import BytesIO
 
 #e-mail 함수
 def send_email(subject, body):
-    smtp_server = "smtp.gmail.com"
-    port = 587  # Gmail SMTP 포트
+  smtp_server = "smtp.gmail.com"
+  port = 587  # Gmail SMTP 포트
 
-    sender_email = "hoo217606@gmail.com"
-    receiver_email = ["tmdgn2002@gmail.com", "bigman7758@naver.com"]
-    app_password = "yoch spra idlc stki"  # 애플리케이션 비밀번호 사용
+  sender_email = "hoo217606@gmail.com"
+  receiver_emails = ["tmdgn2002@gmail.com", "bigman7758@naver.com"]  # 추가된 수신자 이메일 주소
 
-    message = MIMEMultipart()
-    message["From"] = sender_email
-    message["To"] = receiver_email
-    message["Subject"] = subject  # 수정된 부분
+  app_password = "yoch spra idlc stki"  # 애플리케이션 비밀번호 사용
 
-    message.attach(MIMEText(body, "plain"))
+  message = MIMEMultipart()
+  message["From"] = sender_email
+  message["To"] = ", ".join(receiver_emails)
+  message["Subject"] = subject
 
-    server = smtplib.SMTP(smtp_server, port)
-    server.starttls()
-    server.login(sender_email, app_password)
-    server.sendmail(sender_email, receiver_email, message.as_string())
-    server.quit()
+  message.attach(MIMEText(body, "plain"))
+
+  server = smtplib.SMTP(smtp_server, port)
+  server.starttls()
+  server.login(sender_email, app_password)
+  server.sendmail(sender_email, receiver_emails, message.as_string())
+  server.quit()
 
 #krx정보데이터 크롤링
 def KRX_Crolling(otp_form_data):
