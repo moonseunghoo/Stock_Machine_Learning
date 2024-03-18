@@ -81,7 +81,7 @@ def ticker_list(end_info_day):
     # 데이터프레임 생성 
     result_df = add_52_week_high_info(code, end_info_day)
 
-    result_df = result_df[result_df['5일 평균 거래대금'] >= 20000000000]
+    result_df = result_df[result_df['5일 평균 거래대금'] >= 500000000000]
     # result_df['52주 최고가 대비 변동율'] = result_df['52주 최고가 대비 변동율'].apply(lambda x: float(x))
 
     # 변동율을 기준으로 내림차순 정렬
