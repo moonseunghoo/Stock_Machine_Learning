@@ -20,7 +20,7 @@ def send_email(subject, body):
     port = 587  # Gmail SMTP 포트
 
     sender_email = "hoo217606@gmail.com"
-    receiver_email = "tmdgn2002@gmail.com"
+    receiver_email = ["tmdgn2002@gmail.com", "bigman7758@naver.com"]
     app_password = "yoch spra idlc stki"  # 애플리케이션 비밀번호 사용
 
     message = MIMEMultipart()
