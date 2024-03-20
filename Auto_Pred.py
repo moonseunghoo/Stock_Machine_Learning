@@ -200,6 +200,14 @@ def add_52_week_high_info(series,end_info_day):
 
   return df
 
+def git_pull():
+  try:
+      # Change directory to the repository path
+      subprocess.check_call(['git', 'pull'])
+      print("Git pull successful")
+  except subprocess.CalledProcessError as e:
+      print("Git pull failed:", e)
+
 def git_push(commit_message):
   try:
       # Add all files to staging area
@@ -217,6 +225,7 @@ def git_push(commit_message):
 
 if __name__ == '__main__':
   os.chdir('/home/moon/Stock_Machine_Learning')
+  git_pull()
   today = datetime.now()
   # today = (datetime.now() - timedelta(days=3))
 
